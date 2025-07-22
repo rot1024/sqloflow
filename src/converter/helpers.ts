@@ -105,7 +105,7 @@ export const expressionToSQL = (expr: any): string => {
       if (expr.args) {
         // Special handling for EXISTS function
         if (funcName === 'EXISTS' && expr.args.type === 'expr_list' && expr.args.value?.[0]?.ast) {
-          args = 'subquery';
+          args = '...';
         } else if (Array.isArray(expr.args)) {
           args = expr.args.map((a: any) => expressionToSQL(a)).join(', ');
         } else if (expr.args.expr) {
@@ -178,7 +178,7 @@ export const expressionToSQL = (expr: any): string => {
       return '(subquery)';
 
     case 'exists':
-      return 'EXISTS (subquery)';
+      return 'EXISTS (...)';
 
     default:
       // Fallback for unknown expression types
@@ -312,18 +312,3 @@ export const detectSubqueryInExpression = (expr: any): { hasSubquery: boolean; s
   return { hasSubquery: false };
 };
 
-// Create a subquery node for Phase 1 (simple detection and display)
-export const createSubqueryNode = (
-  ctx: ConversionContext,
-  subqueryType: 'scalar' | 'in' | 'exists',
-  ast?: Select
-): Node => {
-  const node: Node = {
-    id: `node_${ctx.nodeCounter++}`,
-    kind: 'subquery' as NodeKind,
-    label: `Subquery (${subqueryType})`,
-    sql: '(subquery)'
-  };
-  
-  return node;
-};

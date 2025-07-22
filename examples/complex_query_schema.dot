@@ -3,45 +3,43 @@ digraph sqloflow {
   node [shape=box, style=rounded];
 
   // Schema view with snapshots
-  node_0 [label="products", fillcolor=lightblue, style="filled,rounded"];
-  node_4 [label="HAVING COUNT(*) > 5", fillcolor=lightyellow, style="filled,rounded"];
-  node_6 [label="ORDER BY total_products DESC, avg_price ASC", fillcolor=lightgreen, style="filled,rounded"];
-  node_7 [label="LIMIT 10 OFFSET 20", fillcolor=lightgreen, style="filled,rounded"];
   subgraph cluster_0 {
     label="Schema Snapshot 1";
     style=filled;
     fillcolor=lightgray;
     // Relations: products
-    node_1 [label="FROM products", fillcolor=lightgreen, style="filled,rounded"];
+    node_0 [label="FROM products", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_1 {
     label="Schema Snapshot 2";
     style=filled;
     fillcolor=lightgray;
     // Relations: products
-    node_2 [label="WHERE status = 'active' AND price > 10", fillcolor=lightyellow, style="filled,rounded"];
+    node_1 [label="WHERE status = 'active' AND price > 10", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
     style=filled;
     fillcolor=lightgray;
     // Relations: _grouped
-    node_3 [label="GROUP BY category", fillcolor=lightgreen, style="filled,rounded"];
+    node_2 [label="GROUP BY category", fillcolor=lightgreen, style="filled,rounded"];
   }
+  node_3 [label="HAVING COUNT(*) > 5", fillcolor=lightyellow, style="filled,rounded"];
+  node_5 [label="ORDER BY total_products DESC, avg_price ASC", fillcolor=lightgreen, style="filled,rounded"];
+  node_6 [label="LIMIT 10 OFFSET 20", fillcolor=lightgreen, style="filled,rounded"];
   subgraph cluster_3 {
     label="Schema Snapshot 4";
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_5 [label="SELECT category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price", fillcolor=lightgreen, style="filled,rounded"];
+    node_4 [label="SELECT category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Schema transformation edges
-  node_0 -> node_1 [color=black];
+  node_0 -> node_1 [color=black, label="schema change"];
   node_1 -> node_2 [color=black, label="schema change"];
-  node_2 -> node_3 [color=black, label="schema change"];
+  node_2 -> node_3 [color=black];
   node_3 -> node_4 [color=black];
   node_4 -> node_5 [color=black];
   node_5 -> node_6 [color=black];
-  node_6 -> node_7 [color=black];
 }

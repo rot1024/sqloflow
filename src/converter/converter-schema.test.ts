@@ -46,13 +46,14 @@ describe('convert with schema', () => {
     const ast = parse(sql);
     const ir = convert(ast);
     
-    // Find the products table node
-    const tableNode = ir.nodes.find(n => n.kind === 'relation' && n.label === 'products');
-    expect(tableNode).toBeDefined();
+    // Find the FROM node that contains the table info
+    const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
+    expect(fromNode).toBeDefined();
+    expect(fromNode?.sql).toContain('products');
     
-    // Find defines edges from table
+    // Find defines edges from FROM node
     const definesEdges = ir.edges.filter(e => 
-      e.kind === 'defines' && e.from.node === tableNode?.id
+      e.kind === 'defines' && e.from.node === fromNode?.id
     );
     
     expect(definesEdges).toHaveLength(2); // Two columns
@@ -77,11 +78,11 @@ describe('convert with schema', () => {
     const ast = parse(sql);
     const ir = convert(ast);
     
-    const tableNode = ir.nodes.find(n => n.kind === 'relation' && n.label === 'categories');
+    const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
     const columnNodes = ir.nodes.filter(n => n.kind === 'column');
     
-    // All column nodes should have the table as parent
-    expect(columnNodes.every(n => n.parent === tableNode?.id)).toBe(true);
+    // All column nodes should have the FROM node as parent
+    expect(columnNodes.every(n => n.parent === fromNode?.id)).toBe(true);
   });
 
   it('should handle multiple tables with joins', () => {
@@ -110,14 +111,14 @@ describe('convert with schema', () => {
     expect(columnNodes).toHaveLength(5); // 2 from users + 3 from orders
     
     // Check that each table's columns have correct parent
-    const usersTable = ir.nodes.find(n => n.kind === 'relation' && n.label.includes('users'));
-    const ordersTable = ir.nodes.find(n => n.kind === 'relation' && n.label.includes('orders'));
+    const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
+    const joinNode = ir.nodes.find(n => n.kind === 'op' && n.label.includes('JOIN'));
     
-    const userColumns = columnNodes.filter(n => n.parent === usersTable?.id);
-    const orderColumns = columnNodes.filter(n => n.parent === ordersTable?.id);
+    const fromColumns = columnNodes.filter(n => n.parent === fromNode?.id);
+    const joinColumns = columnNodes.filter(n => n.parent === joinNode?.id);
     
-    expect(userColumns).toHaveLength(2);
-    expect(orderColumns).toHaveLength(3);
+    expect(fromColumns).toHaveLength(2); // users columns
+    expect(joinColumns).toHaveLength(3); // orders columns
   });
 
   it('should work when no schema is available', () => {
@@ -130,8 +131,9 @@ describe('convert with schema', () => {
     const columnNodes = ir.nodes.filter(n => n.kind === 'column');
     expect(columnNodes).toHaveLength(0);
     
-    // Should still have table and operation nodes
-    const tableNode = ir.nodes.find(n => n.kind === 'relation');
-    expect(tableNode).toBeDefined();
+    // Should still have FROM operation node
+    const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
+    expect(fromNode).toBeDefined();
+    expect(fromNode?.sql).toContain('unknown_table');
   });
 });

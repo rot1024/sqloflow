@@ -3,33 +3,43 @@ digraph sqloflow {
   node [shape=box, style=rounded];
 
   // Schema view with snapshots
-  node_0 [label="customers AS c", fillcolor=lightblue, style="filled,rounded"];
-  node_3 [label="Subquery (exists)", fillcolor=lavender, style="filled,rounded,dashed", shape=box3d];
   subgraph cluster_0 {
     label="Schema Snapshot 1";
     style=filled;
     fillcolor=lightgray;
     // Relations: c
-    node_1 [label="FROM customers AS c", fillcolor=lightgreen, style="filled,rounded"];
+    node_0 [label="FROM customers AS c", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_1 {
     label="Schema Snapshot 2";
     style=filled;
     fillcolor=lightgray;
-    // Relations: c
-    node_2 [label="WHERE EXISTS(subquery)", fillcolor=lightyellow, style="filled,rounded"];
+    // Relations: c, o
+    node_1 [label="WHERE EXISTS(...)", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_4 [label="SELECT c.customer_id, c.name", fillcolor=lightgreen, style="filled,rounded"];
+    node_3 [label="SELECT c.customer_id, c.name", fillcolor=lightgreen, style="filled,rounded"];
   }
 
+  // Subquery 1
+  subgraph cluster_node_2 {
+    label="Subquery (exists)";
+    style=filled;
+    fillcolor=lavender;
+    color=purple;
+    subq_2_node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_1 [label="WHERE o.customer_id = c.customer_id AND o.status = 'pending'", fillcolor=lightyellow, style="filled,rounded"];
+    subq_2_node_2 [label="SELECT 1", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_0 -> subq_2_node_1 [color=black];
+    subq_2_node_1 -> subq_2_node_2 [color=black];
+  }
+  subq_2_node_2 -> node_1 [color=purple, style=bold, label="boolean"];
+
   // Schema transformation edges
-  node_0 -> node_1 [color=black];
-  node_1 -> node_2 [color=black, label="schema change"];
-  node_3 -> node_2 [color=purple, style=bold, label="subquery result"];
-  node_2 -> node_4 [color=black, label="schema change"];
+  node_0 -> node_1 [color=black, label="schema change"];
+  node_1 -> node_3 [color=black, label="schema change"];
 }

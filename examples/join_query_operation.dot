@@ -3,19 +3,15 @@ digraph sqloflow {
   node [shape=box, style=rounded];
 
   // Node definitions
-  node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
-  node_2 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
-  node_1 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
-  node_5 [label="SELECT u.name, o.total", fillcolor=lightgreen, style="filled,rounded"];
-  node_6 [label="ORDER BY o.total DESC", fillcolor=lightgreen, style="filled,rounded"];
-  node_4 [label="WHERE o.total > 100", fillcolor=lightyellow, style="filled,rounded"];
+  node_0 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
+  node_1 [label="INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="SELECT u.name, o.total", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="ORDER BY o.total DESC", fillcolor=lightgreen, style="filled,rounded"];
+  node_2 [label="WHERE o.total > 100", fillcolor=lightyellow, style="filled,rounded"];
 
   // Edges
   node_0 -> node_1 [color=black];
-  node_1 -> node_3 [color=black];
+  node_1 -> node_2 [color=black];
   node_2 -> node_3 [color=black];
   node_3 -> node_4 [color=black];
-  node_4 -> node_5 [color=black];
-  node_5 -> node_6 [color=black];
 }

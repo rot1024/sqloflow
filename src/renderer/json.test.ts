@@ -16,11 +16,10 @@ describe('JSON renderer', () => {
     expect(json.nodes).toBeDefined();
     expect(json.edges).toBeDefined();
     
-    // Operation view includes op/clause/relation nodes
+    // Operation view includes op/clause nodes
     const nodeTypes = (json as JsonOutput).nodes.map(n => n.type);
     expect(nodeTypes).toContain('op');
     expect(nodeTypes).toContain('clause');
-    expect(nodeTypes).toContain('relation');
   });
 
   it('should render schema view', () => {
@@ -54,9 +53,8 @@ describe('JSON renderer', () => {
     const operationNodeTypes = (operationJson as JsonOutput).nodes.map(n => n.type);
     expect(operationNodeTypes).toContain('op');
     
-    // Schema view should have relation and column nodes
+    // Schema view should have column nodes (relation nodes are now integrated into FROM/JOIN nodes)
     const schemaNodeTypes = (schemaJson as JsonOutput).nodes.map(n => n.type);
-    expect(schemaNodeTypes).toContain('relation');
     expect(schemaNodeTypes).toContain('column');
     
     // Schema view with column nodes should not have op/clause in filtered result

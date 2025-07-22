@@ -1,14 +1,12 @@
 flowchart LR
-    node_0[products]
+    node_0[FROM products]
     node_1[id]
     node_2[name]
     node_3[price]
-    node_4[FROM products]
-    node_5["WHERE price &gt; 50"]
-    node_6["SELECT name, price"]
+    node_4["WHERE price &gt; 50"]
+    node_5["SELECT name, price"]
     node_0 --> node_1
     node_0 --> node_2
     node_0 --> node_3
     node_0 --> node_4
     node_4 --> node_5
-    node_5 --> node_6

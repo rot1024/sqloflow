@@ -1,4 +1,5 @@
-import type { Graph, Node, Edge } from '../types/ir.js';
+import type { Graph, Node, Edge, SubqueryNode } from '../types/ir.js';
+import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
 
 export const renderMermaid = (graph: Graph): string => {
   const lines: string[] = ['flowchart LR'];
@@ -40,10 +41,15 @@ export const renderMermaid = (graph: Graph): string => {
     lines.push('');
   }
   
-  // Render main query nodes
+  // Render main query nodes and subqueries
   for (const node of mainNodes) {
     if (!isCteRelatedNode(graph, node, cteNodes)) {
-      lines.push(`    ${formatNode(node)}`);
+      if (node.kind === 'subquery') {
+        // Render subquery as subgraph
+        lines.push(...renderSubquery(node as SubqueryNode, graph));
+      } else {
+        lines.push(`    ${formatNode(node)}`);
+      }
     }
   }
   
@@ -51,6 +57,11 @@ export const renderMermaid = (graph: Graph): string => {
   const mainEdges = graph.edges.filter(edge => {
     const fromNode = graph.nodes.find(n => n.id === edge.from.node);
     const toNode = graph.nodes.find(n => n.id === edge.to.node);
+    
+    // Skip edges from subquery nodes (they're handled in renderSubquery)
+    if (fromNode?.kind === 'subquery' && edge.kind === 'subqueryResult') {
+      return false;
+    }
     
     // At least one side is a main query node
     return (fromNode && !isCteRelatedNode(graph, fromNode, cteNodes)) ||
@@ -194,4 +205,44 @@ const isCteRelatedNode = (graph: Graph, node: Node, cteNodes: Node[]): boolean =
     }
   }
   return false;
+};
+
+const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph): string[] => {
+  const lines: string[] = [];
+  
+  if (!subqueryNode.innerGraph) {
+    // Phase 1: Simple subquery node without inner graph
+    lines.push(`    ${formatNode(subqueryNode)}`);
+    return lines;
+  }
+  
+  // Phase 2: Render subquery as subgraph
+  const subgraphId = `subquery_${sanitizeId(subqueryNode.id)}`;
+  lines.push(`    subgraph ${subgraphId} ["${escapeLabel(subqueryNode.label)}"]`);
+  lines.push('        direction TB');
+  
+  // Render inner nodes
+  for (const node of subqueryNode.innerGraph.nodes) {
+    lines.push(`        ${formatNode(node)}`);
+  }
+  
+  // Render inner edges
+  for (const edge of subqueryNode.innerGraph.edges) {
+    lines.push(`        ${formatEdge(edge, subqueryNode.innerGraph)}`);
+  }
+  
+  lines.push('    end');
+  
+  // Find the result node and create connection to parent
+  const resultNode = findSubqueryResultNode(subqueryNode.innerGraph);
+  if (resultNode) {
+    // Find edges in parent graph that connect to this subquery
+    const outgoingEdges = parentGraph.edges.filter(e => e.from.node === subqueryNode.id);
+    for (const edge of outgoingEdges) {
+      const label = getSubqueryResultLabel(subqueryNode.subqueryType);
+      lines.push(`    ${sanitizeId(resultNode.id)} -->|${label}| ${sanitizeId(edge.to.node)}`);
+    }
+  }
+  
+  return lines;
 };

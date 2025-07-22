@@ -1,10 +1,15 @@
 flowchart LR
-    node_0[orders AS o]
-    node_1[FROM orders AS o]
-    node_2["WHERE o.total_amount = expr"]
-    node_3[["Subquery (scalar)"]]
-    node_4["SELECT o.id, o.total_amount"]
+    node_0[FROM orders AS o]
+    node_1["WHERE o.total_amount = expr"]
+    subgraph subquery_node_2 ["Subquery (scalar)"]
+        direction TB
+        subq_2_node_0[FROM orders]
+        subq_2_node_1["WHERE customer_id = o.customer_id"]
+        subq_2_node_2["SELECT MAX(total_amount)"]
+        subq_2_node_0 --> subq_2_node_1
+        subq_2_node_1 --> subq_2_node_2
+    end
+    subq_2_node_2 -->|1 row, 1 col| node_1
+    node_3["SELECT o.id, o.total_amount"]
     node_0 --> node_1
-    node_1 --> node_2
-    node_3 -->|scalar| node_2
-    node_2 --> node_4
+    node_1 --> node_3

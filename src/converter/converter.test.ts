@@ -9,17 +9,15 @@ describe('convert', () => {
     const ast = parse(sql);
     const ir = convert(ast);
     
-    // FROM users creates: relation node + FROM op node + SELECT op node = 3 nodes
-    expect(ir.nodes).toHaveLength(3);
-    expect(ir.edges).toHaveLength(2);
+    // FROM users creates: FROM op node + SELECT op node = 2 nodes
+    expect(ir.nodes).toHaveLength(2);
+    expect(ir.edges).toHaveLength(1);
     
-    const relationNode = ir.nodes.find(n => n.kind === 'relation');
     const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
     const selectNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'SELECT');
     
-    expect(relationNode).toBeDefined();
-    expect(relationNode?.label).toBe('users');
     expect(fromNode).toBeDefined();
+    expect(fromNode?.sql).toContain('users');
     expect(selectNode).toBeDefined();
     expect(selectNode?.sql).toBe('id, name');
   });
@@ -29,9 +27,9 @@ describe('convert', () => {
     const ast = parse(sql);
     const ir = convert(ast);
     
-    // FROM users creates: relation + FROM op + WHERE clause + SELECT op = 4 nodes
-    expect(ir.nodes).toHaveLength(4);
-    expect(ir.edges).toHaveLength(3);
+    // FROM users creates: FROM op + WHERE clause + SELECT op = 3 nodes
+    expect(ir.nodes).toHaveLength(3);
+    expect(ir.edges).toHaveLength(2);
     
     const whereNode = ir.nodes.find(n => n.kind === 'clause' && n.label === 'WHERE');
     expect(whereNode).toBeDefined();
@@ -49,8 +47,10 @@ describe('convert', () => {
     const joinNode = ir.nodes.find(n => n.kind === 'op' && n.label.includes('JOIN'));
     expect(joinNode).toBeDefined();
     
-    const relationNodes = ir.nodes.filter(n => n.kind === 'relation');
-    expect(relationNodes).toHaveLength(2);
+    // Should have FROM and JOIN nodes instead of relation nodes
+    const fromNode = ir.nodes.find(n => n.kind === 'op' && n.label === 'FROM');
+    expect(fromNode).toBeDefined();
+    expect(fromNode?.sql).toContain('users');
   });
 
   it('should convert SELECT with GROUP BY and ORDER BY', () => {

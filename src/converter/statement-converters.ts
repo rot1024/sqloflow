@@ -30,8 +30,7 @@ import {
   groupByToSQL,
   orderByToSQL,
   limitToSQL,
-  detectSubqueryInExpression,
-  createSubqueryNode
+  detectSubqueryInExpression
 } from './helpers.js';
 import {
   createSnapshot,
@@ -40,6 +39,7 @@ import {
   applyJoinTransformation,
   inferColumnsFromExpression
 } from './schema-transformations.js';
+import { convertSubquery } from './subquery-converter.js';
 
 // Type guard for Select statements (used in CTE processing)
 function isSelect(stmt: AST): stmt is Select {
@@ -103,8 +103,8 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
 
     // Detect and create subquery nodes
     const subqueryInfo = detectSubqueryInExpression(stmt.where);
-    if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType) {
-      const subqueryNode = createSubqueryNode(ctx, subqueryInfo.subqueryType, subqueryInfo.ast);
+    if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
+      const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType);
       nodes.push(subqueryNode);
       // Connect subquery to WHERE clause
       edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, whereNode.id));
@@ -152,8 +152,8 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
   for (const col of stmt.columns) {
     if (col.expr) {
       const subqueryInfo = detectSubqueryInExpression(col.expr);
-      if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType) {
-        const subqueryNode = createSubqueryNode(ctx, subqueryInfo.subqueryType, subqueryInfo.ast);
+      if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
+        const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType);
         nodes.push(subqueryNode);
         // Connect subquery to SELECT clause
         edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, selectNode.id));
@@ -218,27 +218,25 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
     const table = from[i];
     const tableName = getTableName(table);
     const tableAlias = ('as' in table && table.as) ? table.as : tableName;
-    const tableNode = createNode(ctx, 'relation', getTableLabel(table), tableToSQL(table));
-    nodes.push(tableNode);
-
-    // Add column nodes if schema is available
-    if (ctx.schema.tables[tableName]) {
-      const tableSchema = ctx.schema.tables[tableName];
-      for (const column of tableSchema.columns) {
-        const columnNode = createNode(ctx, 'column', column.name, column.type);
-        columnNode.parent = tableNode.id;
-        nodes.push(columnNode);
-
-        // Add defines edge from table to column
-        edges.push(createEdge(ctx, 'defines', tableNode.id, columnNode.id));
-      }
-    }
 
     if (i === 0) {
+      // For the first table, create FROM node with table information
       const fromNode = createNode(ctx, 'op', 'FROM', `FROM ${getTableLabel(table)}`);
       nodes.push(fromNode);
-      edges.push(createEdge(ctx, 'flow', tableNode.id, fromNode.id));
       rootNodeId = fromNode.id;
+
+      // Add column nodes if schema is available
+      if (ctx.schema.tables[tableName]) {
+        const tableSchema = ctx.schema.tables[tableName];
+        for (const column of tableSchema.columns) {
+          const columnNode = createNode(ctx, 'column', column.name, column.type);
+          columnNode.parent = fromNode.id;
+          nodes.push(columnNode);
+
+          // Add defines edge from FROM node to column
+          edges.push(createEdge(ctx, 'defines', fromNode.id, columnNode.id));
+        }
+      }
 
       // Initialize schema with first table (even if unknown)
       if (!ctx.schema.tables[tableName]) {
@@ -258,9 +256,22 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         const joinNode = createNode(ctx, 'op', joinType, joinToSQL(table));
         nodes.push(joinNode);
 
+        // Only connect from the previous node (no separate table node)
         edges.push(createEdge(ctx, 'flow', rootNodeId, joinNode.id));
-        edges.push(createEdge(ctx, 'flow', tableNode.id, joinNode.id));
         rootNodeId = joinNode.id;
+
+        // Add column nodes for joined table if schema is available
+        if (ctx.schema.tables[tableName]) {
+          const tableSchema = ctx.schema.tables[tableName];
+          for (const column of tableSchema.columns) {
+            const columnNode = createNode(ctx, 'column', column.name, column.type);
+            columnNode.parent = joinNode.id;
+            nodes.push(columnNode);
+
+            // Add defines edge from JOIN node to column
+            edges.push(createEdge(ctx, 'defines', joinNode.id, columnNode.id));
+          }
+        }
 
         // Ensure table exists in current schema before JOIN
         if (!ctx.schema.tables[tableName]) {
@@ -281,7 +292,7 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         // Handle other FROM types (TableExpr, etc.)
         const fromNode = createNode(ctx, 'op', 'FROM', `FROM ${getTableLabel(table)}`);
         nodes.push(fromNode);
-        edges.push(createEdge(ctx, 'flow', tableNode.id, fromNode.id));
+        edges.push(createEdge(ctx, 'flow', rootNodeId, fromNode.id));
         rootNodeId = fromNode.id;
       }
 

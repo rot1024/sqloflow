@@ -1,5 +1,6 @@
-import type { Graph, Node, Edge } from '../types/ir.js';
+import type { Graph, Node, Edge, SubqueryNode } from '../types/ir.js';
 import type { JsonViewType } from '../types/renderer.js';
+import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
 
 export const renderDot = (graph: Graph, viewType: JsonViewType = 'operation'): string => {
   const lines: string[] = [];
@@ -19,16 +20,20 @@ export const renderDot = (graph: Graph, viewType: JsonViewType = 'operation'): s
 };
 
 const renderOperationView = (graph: Graph, lines: string[]) => {
-  // Group nodes by kind for styling
+  // Separate subquery nodes from regular nodes
+  const subqueryNodes = graph.nodes.filter(n => n.kind === 'subquery') as SubqueryNode[];
+  const regularNodes = graph.nodes.filter(n => n.kind !== 'subquery');
+  
+  // Group regular nodes by kind for styling
   const nodesByKind = new Map<string, Node[]>();
-  graph.nodes.forEach(node => {
+  regularNodes.forEach(node => {
     if (!nodesByKind.has(node.kind)) {
       nodesByKind.set(node.kind, []);
     }
     nodesByKind.get(node.kind)!.push(node);
   });
   
-  // Define node styles by kind
+  // Define regular node styles by kind
   lines.push('  // Node definitions');
   nodesByKind.forEach((nodes, kind) => {
     const style = getNodeStyle(kind);
@@ -38,11 +43,24 @@ const renderOperationView = (graph: Graph, lines: string[]) => {
     });
   });
   
+  // Render subqueries as subgraphs
+  subqueryNodes.forEach((subqueryNode, index) => {
+    lines.push('');
+    lines.push(`  // Subquery ${index + 1}`);
+    renderSubquerySubgraph(subqueryNode, lines, graph);
+  });
+  
   lines.push('');
   lines.push('  // Edges');
   
-  // Render edges
+  // Render edges (excluding those from subquery nodes which are handled in subgraphs)
   graph.edges.forEach(edge => {
+    // Skip edges from subquery nodes
+    const fromNode = graph.nodes.find(n => n.id === edge.from.node);
+    if (fromNode?.kind === 'subquery' && edge.kind === 'subqueryResult') {
+      return;
+    }
+    
     const style = getEdgeStyle(edge.kind);
     const fromHandle = edge.from.handle ? `:${escapeId(edge.from.handle)}` : '';
     const toHandle = edge.to.handle ? `:${escapeId(edge.to.handle)}` : '';
@@ -54,10 +72,14 @@ const renderOperationView = (graph: Graph, lines: string[]) => {
 const renderSchemaView = (graph: Graph, lines: string[]) => {
   lines.push('  // Schema view with snapshots');
   
-  // Group nodes by their schema snapshot
+  // Separate subquery nodes from regular nodes
+  const subqueryNodes = graph.nodes.filter(n => n.kind === 'subquery') as SubqueryNode[];
+  const regularNodes = graph.nodes.filter(n => n.kind !== 'subquery');
+  
+  // Group regular nodes by their schema snapshot
   const nodesWithSnapshots = new Map<string, { node: Node; snapshotIndex: number }[]>();
   
-  graph.nodes.forEach(node => {
+  regularNodes.forEach(node => {
     // Find snapshot for this node
     const snapshotIndex = graph.snapshots?.findIndex(s => s.stepId === node.id) ?? -1;
     const key = snapshotIndex >= 0 ? `snapshot_${snapshotIndex}` : 'no_snapshot';
@@ -101,11 +123,24 @@ const renderSchemaView = (graph: Graph, lines: string[]) => {
     }
   });
   
+  // Render subqueries as subgraphs
+  subqueryNodes.forEach((subqueryNode, index) => {
+    lines.push('');
+    lines.push(`  // Subquery ${index + 1}`);
+    renderSubquerySubgraph(subqueryNode, lines, graph);
+  });
+  
   lines.push('');
   lines.push('  // Schema transformation edges');
   
   // Render edges with schema transformation indicators
   graph.edges.forEach(edge => {
+    // Skip edges from subquery nodes which are handled in subgraphs
+    const fromNode = graph.nodes.find(n => n.id === edge.from.node);
+    if (fromNode?.kind === 'subquery' && edge.kind === 'subqueryResult') {
+      return;
+    }
+    
     const style = getEdgeStyle(edge.kind);
     const fromHandle = edge.from.handle ? `:${escapeId(edge.from.handle)}` : '';
     const toHandle = edge.to.handle ? `:${escapeId(edge.to.handle)}` : '';
@@ -205,5 +240,52 @@ const formatNodeLabel = (node: Node): string => {
       return label;
     default:
       return label;
+  }
+};
+
+const renderSubquerySubgraph = (subqueryNode: SubqueryNode, lines: string[], parentGraph: Graph) => {
+  if (!subqueryNode.innerGraph) {
+    // Phase 1: Simple subquery node without inner graph
+    const style = getNodeStyle('subquery');
+    const label = formatNodeLabel(subqueryNode);
+    lines.push(`  ${escapeId(subqueryNode.id)} [label="${escapeLabel(label)}"${style}];`);
+    return;
+  }
+  
+  // Phase 2: Render subquery as subgraph
+  lines.push(`  subgraph cluster_${escapeId(subqueryNode.id)} {`);
+  lines.push(`    label="${escapeLabel(subqueryNode.label)}";`);
+  lines.push('    style=filled;');
+  lines.push('    fillcolor=lavender;');
+  lines.push('    color=purple;');
+  
+  // Render inner nodes
+  subqueryNode.innerGraph.nodes.forEach(node => {
+    const style = getNodeStyle(node.kind);
+    const label = formatNodeLabel(node);
+    lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
+  });
+  
+  // Render inner edges
+  subqueryNode.innerGraph.edges.forEach(edge => {
+    const style = getEdgeStyle(edge.kind);
+    const attrs = style ? ` [${style}]` : '';
+    lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)}${attrs};`);
+  });
+  
+  lines.push('  }');
+  
+  // Find the result node and create connection to parent
+  const resultNode = findSubqueryResultNode(subqueryNode.innerGraph);
+  if (resultNode) {
+    // Find edges in parent graph that connect from this subquery
+    const outgoingEdges = parentGraph.edges.filter(e => e.from.node === subqueryNode.id);
+    for (const edge of outgoingEdges) {
+      const resultLabel = getSubqueryResultLabel(subqueryNode.subqueryType);
+      const style = getEdgeStyle('subqueryResult');
+      // Remove the duplicate label from edge style
+      const cleanStyle = style.replace(/, label="[^"]*"/, '');
+      lines.push(`  ${escapeId(resultNode.id)} -> ${escapeId(edge.to.node)} [${cleanStyle}, label="${resultLabel}"];`);
+    }
   }
 };

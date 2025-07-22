@@ -3,15 +3,25 @@ digraph sqloflow {
   node [shape=box, style=rounded];
 
   // Node definitions
-  node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
-  node_1 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
-  node_4 [label="SELECT u.id, u.name", fillcolor=lightgreen, style="filled,rounded"];
-  node_2 [label="WHERE u.id IN expr", fillcolor=lightyellow, style="filled,rounded"];
-  node_3 [label="Subquery (in)", fillcolor=lavender, style="filled,rounded,dashed", shape=box3d];
+  node_0 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="SELECT u.id, u.name", fillcolor=lightgreen, style="filled,rounded"];
+  node_1 [label="WHERE u.id IN expr", fillcolor=lightyellow, style="filled,rounded"];
+
+  // Subquery 1
+  subgraph cluster_node_2 {
+    label="Subquery (in)";
+    style=filled;
+    fillcolor=lavender;
+    color=purple;
+    subq_2_node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_1 [label="WHERE o.total_amount > 100000", fillcolor=lightyellow, style="filled,rounded"];
+    subq_2_node_2 [label="SELECT o.user_id", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_0 -> subq_2_node_1 [color=black];
+    subq_2_node_1 -> subq_2_node_2 [color=black];
+  }
+  subq_2_node_2 -> node_1 [color=purple, style=bold, label="set of values"];
 
   // Edges
   node_0 -> node_1 [color=black];
-  node_1 -> node_2 [color=black];
-  node_3 -> node_2 [color=purple, style=bold, label="subquery result"];
-  node_2 -> node_4 [color=black];
+  node_1 -> node_3 [color=black];
 }
