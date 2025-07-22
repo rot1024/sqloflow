@@ -27,7 +27,7 @@ digraph schema_flow {
   // Data flow edges
 
   // JOIN operations with table info
-  node_6 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id", style=filled, fillcolor=lightyellow];
+  node_6 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id\nrecent_max.customer_id\nrecent_max.max_total", style=filled, fillcolor=lightyellow];
   node_5 -> node_6;
   node_3 -> node_6;
   node_6 -> node_7;

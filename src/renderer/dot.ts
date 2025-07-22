@@ -4,13 +4,13 @@
 
 import type { Graph, Node, Edge, SubqueryNode, SchemaSnapshot, RelationSchema } from '../types/ir.js';
 import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
-
-interface TableNode {
-  id: string;
-  tableName: string;
-  columns: string[];
-  type: 'source' | 'result' | 'intermediate';
-}
+import { 
+  inferSchemaFromGraph, 
+  extractColumnReferences, 
+  extractTableAndAlias,
+  getJoinColumns,
+  type TableInfo 
+} from './utils/schema-inference.js';
 
 interface OperationNode {
   id: string;
@@ -27,9 +27,9 @@ export const renderDot = (graph: Graph): string => {
   lines.push('  node [shape=record];');
   lines.push('');
   
-  // Collect all tables from snapshots
-  const tables = new Map<string, TableNode>();
-  const tableAliases = new Map<string, string>(); // alias -> actual table name
+  // Infer schema information from the graph
+  const { tables, tableAliases } = inferSchemaFromGraph(graph);
+  
   const operations: OperationNode[] = [];
   const fromNodeToTable = new Map<string, string>(); // FROM node ID -> table name
   const incomingEdgeCount = new Map<string, number>(); // Node ID -> incoming edge count
@@ -42,102 +42,13 @@ export const renderDot = (graph: Graph): string => {
     }
   });
   
-  // Process snapshots to extract schema information
-  if (graph.snapshots) {
-    // Use the first snapshot that contains schema information (after CREATE TABLE)
-    const schemaSnapshot = graph.snapshots.find(s => s.relations && Object.keys(s.relations).length > 0);
-    if (schemaSnapshot?.relations) {
-      Object.entries(schemaSnapshot.relations).forEach(([aliasName, schema]) => {
-        // Skip internal tables like _result
-        if (!aliasName.startsWith('_')) {
-          // Use the actual table name from the schema, not the alias
-          const actualTableName = schema.name;
-          tables.set(actualTableName, {
-            id: `table_${actualTableName}`,
-            tableName: actualTableName,
-            columns: schema.columns.map(col => col.name),
-            type: 'source'
-          });
-        }
-      });
-    }
-  }
-  
-  // Process FROM and JOIN nodes to build alias mapping and infer tables
+  // Process FROM nodes to map them to tables
   graph.nodes.forEach(node => {
-    if ((node.kind === 'op' && node.label === 'FROM') || 
-        (node.kind === 'op' && node.label.includes('JOIN'))) {
-      if (node.sql) {
-        const aliasInfo = extractTableAndAlias(node.sql);
-        if (aliasInfo) {
-          // Always map alias to table name
-          tableAliases.set(aliasInfo.alias, aliasInfo.table);
-          
-          // Map FROM node to table for later replacement
-          if (node.label === 'FROM') {
-            fromNodeToTable.set(node.id, `${aliasInfo.table}_${node.id}`);
-          }
-          
-          // If table doesn't exist in our collection (no CREATE TABLE), 
-          // create a placeholder with inferred columns
-          if (!tables.has(aliasInfo.table)) {
-            tables.set(aliasInfo.table, {
-              id: `table_${aliasInfo.table}`,
-              tableName: aliasInfo.table,
-              columns: [], // Will be populated from SELECT/WHERE clauses
-              type: 'source'
-            });
-          }
-        }
+    if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
+      const aliasInfo = extractTableAndAlias(node.sql);
+      if (aliasInfo) {
+        fromNodeToTable.set(node.id, `${aliasInfo.table}_${node.id}`);
       }
-    }
-  });
-  
-  // Infer columns from SELECT, WHERE, and JOIN clauses
-  graph.nodes.forEach(node => {
-    if (node.kind === 'op' && node.label === 'SELECT' && node.sql) {
-      // Extract column references from SELECT
-      const columnRefs = extractColumnReferences(node.sql);
-      columnRefs.forEach(ref => {
-        const actualTable = tableAliases.get(ref.table) || ref.table;
-        const table = tables.get(actualTable);
-        if (table && !table.columns.includes(ref.column)) {
-          table.columns.push(ref.column);
-        } else if (!table && !tables.has(ref.table)) {
-          // Don't create a table for an alias that we couldn't resolve
-          console.warn(`Could not resolve table for reference: ${ref.table}.${ref.column}`);
-        }
-      });
-    }
-    
-    if (node.kind === 'clause' && node.label === 'WHERE' && node.sql) {
-      // Extract column references from WHERE
-      const columnRefs = extractColumnReferences(node.sql);
-      columnRefs.forEach(ref => {
-        const actualTable = tableAliases.get(ref.table) || ref.table;
-        const table = tables.get(actualTable);
-        if (table && !table.columns.includes(ref.column)) {
-          table.columns.push(ref.column);
-        } else if (!table && !tables.has(ref.table)) {
-          // Don't create a table for an alias that we couldn't resolve
-          console.warn(`Could not resolve table for reference: ${ref.table}.${ref.column}`);
-        }
-      });
-    }
-    
-    if (node.kind === 'op' && node.label.includes('JOIN') && node.sql) {
-      // Extract column references from JOIN ON clause
-      const columnRefs = extractColumnReferences(node.sql);
-      columnRefs.forEach(ref => {
-        const actualTable = tableAliases.get(ref.table) || ref.table;
-        const table = tables.get(actualTable);
-        if (table && !table.columns.includes(ref.column)) {
-          table.columns.push(ref.column);
-        } else if (!table && !tables.has(ref.table)) {
-          // Don't create a table for an alias that we couldn't resolve
-          console.warn(`Could not resolve table for reference: ${ref.table}.${ref.column}`);
-        }
-      });
     }
   });
   
@@ -428,58 +339,8 @@ export const renderDot = (graph: Graph): string => {
   lines.push('  // JOIN operations with table info');
   graph.nodes.forEach(node => {
     if (node.kind === 'op' && node.label.includes('JOIN') && node.sql) {
-      // JOINs always have multiple inputs (at least 2 tables), so show schema
-      let schemaInfo: string[] = [];
-      
-      // Instead of relying on snapshots which may only have referenced columns,
-      // we need to find all tables involved in the JOIN and get ALL their columns
-      const joinedTables = new Set<string>();
-      
-      // Find all edges coming into this JOIN node
-      graph.edges.forEach(edge => {
-        if (edge.to.node === node.id && edge.kind === 'flow') {
-          const fromNode = graph.nodes.find(n => n.id === edge.from.node);
-          if (fromNode && fromNode.label.startsWith('FROM')) {
-            // Extract table name from FROM node
-            const tableMatch = fromNode.sql?.match(/FROM\s+(\w+)(?:\s+AS\s+(\w+))?/i);
-            if (tableMatch) {
-              const tableName = tableMatch[1];
-              const alias = tableMatch[2] || tableName;
-              joinedTables.add(tableName);
-              tableAliases.set(alias, tableName);
-            }
-          }
-        }
-      });
-      
-      // Also check for the table mentioned in the JOIN clause itself
-      const joinTableMatch = node.sql.match(/JOIN\s+(\w+)(?:\s+AS\s+(\w+))?/i);
-      if (joinTableMatch) {
-        const tableName = joinTableMatch[1];
-        const alias = joinTableMatch[2] || tableName;
-        joinedTables.add(tableName);
-        tableAliases.set(alias, tableName);
-      }
-      
-      // Now get ALL columns from ALL joined tables
-      joinedTables.forEach(tableName => {
-        const table = tables.get(tableName);
-        if (table) {
-          table.columns.forEach(colName => {
-            schemaInfo.push(`${tableName}.${colName}`);
-          });
-        } else if (graph.snapshots) {
-          // Check if it's a CTE by looking at snapshots
-          for (const snapshot of graph.snapshots) {
-            if (snapshot.relations[tableName]) {
-              snapshot.relations[tableName].columns.forEach(col => {
-                schemaInfo.push(`${tableName}.${col.name}`);
-              });
-              break;
-            }
-          }
-        }
-      });
+      // Use the shared utility to get JOIN columns
+      const schemaInfo = getJoinColumns(node, graph, tables, tableAliases);
       
       const columns = schemaInfo.join('\\n');
       // Remove table name from label - just show the JOIN type
@@ -680,63 +541,7 @@ function extractColumnsFromSelectSQL(sql: string): string[] {
   return columns;
 }
 
-function extractTableAndAlias(sql: string): { table: string; alias: string } | null {
-  if (!sql) return null;
-  
-  // Clean the SQL
-  let cleanSql = sql.trim();
-  
-  // Remove "FROM " or "JOIN " prefix if present, including INNER/LEFT/RIGHT/OUTER
-  cleanSql = cleanSql.replace(/^(FROM|(INNER|LEFT|RIGHT|OUTER|FULL)?\s*JOIN)\s+/i, '').trim();
-  
-  // Also remove everything after ON for JOIN statements
-  const onIndex = cleanSql.search(/\s+ON\s+/i);
-  if (onIndex > -1) {
-    cleanSql = cleanSql.substring(0, onIndex).trim();
-  }
-  
-  // Handle "table AS alias" or "table alias" patterns
-  const asMatch = cleanSql.match(/^(\w+)\s+AS\s+(\w+)/i);
-  if (asMatch) {
-    return { table: asMatch[1], alias: asMatch[2] };
-  }
-  
-  // Handle "table alias" without AS
-  const parts = cleanSql.split(/\s+/);
-  if (parts.length >= 2 && /^\w+$/.test(parts[0]) && /^\w+$/.test(parts[1])) {
-    // Check if the second part is not a SQL keyword
-    const keywords = ['ON', 'WHERE', 'ORDER', 'GROUP', 'HAVING', 'LIMIT'];
-    if (!keywords.includes(parts[1].toUpperCase())) {
-      return { table: parts[0], alias: parts[1] };
-    }
-  }
-  
-  // Just table name, use it as both table and alias
-  if (parts.length > 0 && /^\w+$/.test(parts[0])) {
-    return { table: parts[0], alias: parts[0] };
-  }
-  
-  return null;
-}
 
-function extractColumnReferences(sql: string): { table: string; column: string }[] {
-  const refs: { table: string; column: string }[] = [];
-  
-  if (!sql) return refs;
-  
-  // Match patterns like "table.column" or "alias.column"
-  const columnPattern = /(\w+)\.(\w+)/g;
-  let match;
-  
-  while ((match = columnPattern.exec(sql)) !== null) {
-    refs.push({
-      table: match[1],
-      column: match[2]
-    });
-  }
-  
-  return refs;
-}
 
 // Render subquery as a subgraph
 function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], parentGraph: Graph): void {

@@ -1,10 +1,10 @@
 flowchart LR
-    node_0[FROM orders AS o]
-    node_1["WHERE o.total_amount = expr"]
+    node_0["FROM<br/>---<br/>orders.total_amount<br/>orders.id"]
+    node_1["WHERE<br/>---<br/>o.total_amount = expr"]
     subgraph subquery_node_2 ["Subquery (scalar) - correlated"]
         direction TB
         subq_0_node_0[FROM orders]
-        subq_0_node_1["WHERE customer_id = o.customer_id"]
+        subq_0_node_1["WHERE<br/>---<br/>customer_id = o.customer_id"]
         subq_0_node_2["SELECT MAX(total_amount)"]
         subq_0_node_0 --> subq_0_node_1
         subq_0_node_1 --> subq_0_node_2

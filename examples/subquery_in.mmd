@@ -1,10 +1,10 @@
 flowchart LR
-    node_0[FROM users AS u]
-    node_1["WHERE u.id IN expr"]
+    node_0["FROM<br/>---<br/>users.id<br/>users.name"]
+    node_1["WHERE<br/>---<br/>u.id IN expr"]
     subgraph subquery_node_2 ["Subquery (in)"]
         direction TB
         subq_0_node_0[FROM orders AS o]
-        subq_0_node_1["WHERE o.total_amount &gt; 100000"]
+        subq_0_node_1["WHERE<br/>---<br/>o.total_amount &gt; 100000"]
         subq_0_node_2["SELECT o.user_id"]
         subq_0_node_0 --> subq_0_node_1
         subq_0_node_1 --> subq_0_node_2

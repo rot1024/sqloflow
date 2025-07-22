@@ -1,9 +1,9 @@
 flowchart LR
-    node_0[FROM products]
+    node_0["FROM<br/>---<br/>products.id<br/>products.name<br/>products.price"]
     node_1[id]
     node_2[name]
     node_3[price]
-    node_4["WHERE price &gt; 50"]
+    node_4["WHERE<br/>---<br/>price &gt; 50"]
     node_5["SELECT name, price"]
     node_0 --> node_1
     node_0 --> node_2

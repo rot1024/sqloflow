@@ -1,8 +1,56 @@
 import type { Graph, Node, Edge, SubqueryNode } from '../types/ir.js';
 import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
+import { 
+  inferSchemaFromGraph, 
+  getJoinColumns,
+  type TableInfo 
+} from './utils/schema-inference.js';
 
 export const renderMermaid = (graph: Graph): string => {
   const lines: string[] = ['flowchart LR'];
+  
+  // Infer schema information from the graph
+  const { tables, tableAliases } = inferSchemaFromGraph(graph);
+  
+  // Build node schemas map for display
+  const nodeSchemas = new Map<string, string[]>();
+  
+  // Process nodes to populate nodeSchemas based on their operation type
+  graph.nodes.forEach(node => {
+    if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
+      // For FROM nodes, show all columns from the table
+      const aliasInfo = node.sql.match(/FROM\s+(\w+)(?:\s+AS\s+(\w+))?/i);
+      if (aliasInfo) {
+        const tableName = aliasInfo[1];
+        const table = tables.get(tableName);
+        if (table && table.columns.length > 0) {
+          nodeSchemas.set(node.id, table.columns.map(col => `${tableName}.${col}`));
+        }
+      }
+    }
+  });
+  
+  // Also use snapshots for nodes where we have them
+  if (graph.snapshots) {
+    graph.snapshots.forEach(snapshot => {
+      const stepNode = graph.nodes.find(n => n.id === snapshot.stepId);
+      if (stepNode && snapshot.relations) {
+        const columns: string[] = [];
+        Object.entries(snapshot.relations).forEach(([alias, schema]) => {
+          if (!alias.startsWith('_')) {
+            schema.columns.forEach(col => {
+              const qualifiedName = col.source ? `${col.source}.${col.name}` : `${alias}.${col.name}`;
+              columns.push(qualifiedName);
+            });
+          }
+        });
+        if (columns.length > 0) {
+          // Override with snapshot data if available
+          nodeSchemas.set(stepNode.id, columns);
+        }
+      }
+    });
+  }
   
   // Group nodes (e.g., CTEs)
   const cteNodes = graph.nodes.filter(n => n.label.startsWith('CTE:'));
@@ -24,7 +72,7 @@ export const renderMermaid = (graph: Graph): string => {
     
     // Render CTE nodes
     for (const node of cteRelatedNodes) {
-      lines.push(`        ${formatNode(node)}`);
+      lines.push(`        ${formatNode(node, nodeSchemas, graph, tables, tableAliases)}`);
     }
     
     // Render edges within the CTE
@@ -46,9 +94,9 @@ export const renderMermaid = (graph: Graph): string => {
     if (!isCteRelatedNode(graph, node, cteNodes)) {
       if (node.kind === 'subquery') {
         // Render subquery as subgraph
-        lines.push(...renderSubquery(node as SubqueryNode, graph));
+        lines.push(...renderSubquery(node as SubqueryNode, graph, nodeSchemas, tables, tableAliases));
       } else {
-        lines.push(`    ${formatNode(node)}`);
+        lines.push(`    ${formatNode(node, nodeSchemas, graph, tables, tableAliases)}`);
       }
     }
   }
@@ -75,10 +123,48 @@ export const renderMermaid = (graph: Graph): string => {
   return lines.join('\n');
 };
 
-const formatNode = (node: Node): string => {
+const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph, tables: Map<string, TableInfo>, tableAliases: Map<string, string>): string => {
   const nodeId = sanitizeId(node.id);
   const label = escapeLabel(node.label);
   const sql = node.sql ? escapeLabel(node.sql) : '';
+  
+  // Get schema information for this node
+  const schemaColumns = nodeSchemas.get(node.id);
+  
+  // For JOIN nodes, get all columns from joined tables
+  if (node.kind === 'op' && node.label.includes('JOIN')) {
+    // Use the shared utility to get all columns from joined tables
+    const joinColumns = getJoinColumns(node, graph, tables, tableAliases);
+    if (joinColumns.length > 0) {
+      const joinType = node.label.split(' ')[0]; // Extract just "INNER", "LEFT", etc.
+      const columns = joinColumns.map(col => escapeLabel(col)).join('<br/>');
+      return `${nodeId}["${joinType} JOIN<br/>---<br/>${columns}"]`;
+    }
+  }
+  
+  // Format node with schema information if available
+  if (schemaColumns && schemaColumns.length > 0) {
+    const columns = schemaColumns.map(col => escapeLabel(col)).join('<br/>');
+    
+    if (node.kind === 'op' && (node.label === 'SELECT' || node.label === 'GROUP BY')) {
+      // For SELECT and GROUP BY, show operation and columns
+      return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
+    } else if (node.kind === 'relation') {
+      // For table nodes, show table name and columns
+      return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
+    } else if (node.kind === 'op' && node.label.includes('UNION')) {
+      // For UNION, show operation and columns
+      return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
+    } else if (node.kind === 'op' && node.label === 'FROM') {
+      // For FROM nodes with schema, show table and columns
+      return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
+    }
+  }
+  
+  // Add SQL parameter if available (for WHERE, HAVING, etc.)
+  if (sql && node.kind === 'clause') {
+    return `${nodeId}["${label}<br/>---<br/>${sql}"]`;
+  }
   
   switch (node.kind) {
     case 'relation':
@@ -105,10 +191,7 @@ const formatNode = (node: Node): string => {
       }
       return `${nodeId}[${label}]`;
     case 'clause':
-      // Always show SQL details for clauses if available
-      if (sql && (node.label === 'WHERE' || node.label === 'HAVING')) {
-        return `${nodeId}["${label} ${sql}"]`;
-      }
+      // Already handled above
       return `${nodeId}[${label}]`;
     default:
       return `${nodeId}[${label}]`;
@@ -207,12 +290,12 @@ const isCteRelatedNode = (graph: Graph, node: Node, cteNodes: Node[]): boolean =
   return false;
 };
 
-const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph): string[] => {
+const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph, nodeSchemas: Map<string, string[]>, tables: Map<string, TableInfo>, tableAliases: Map<string, string>): string[] => {
   const lines: string[] = [];
   
   if (!subqueryNode.innerGraph) {
     // Phase 1: Simple subquery node without inner graph
-    lines.push(`    ${formatNode(subqueryNode)}`);
+    lines.push(`    ${formatNode(subqueryNode, nodeSchemas, parentGraph, tables, tableAliases)}`);
     return lines;
   }
   
@@ -232,11 +315,11 @@ const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph): string[
   for (const node of subqueryNode.innerGraph.nodes) {
     if (node.kind === 'subquery' && subqueryNode.innerGraph) {
       // Recursively render nested subqueries
-      const nestedLines = renderSubquery(node as SubqueryNode, subqueryNode.innerGraph);
+      const nestedLines = renderSubquery(node as SubqueryNode, subqueryNode.innerGraph, nodeSchemas, tables, tableAliases);
       // Add extra indentation for nested subgraph
       lines.push(...nestedLines.map(line => '    ' + line));
     } else {
-      lines.push(`        ${formatNode(node)}`);
+      lines.push(`        ${formatNode(node, nodeSchemas, subqueryNode.innerGraph, tables, tableAliases)}`);
     }
   }
   

@@ -29,9 +29,9 @@ describe('Mermaid renderer', () => {
     const result = renderMermaid(ir);
     
     expect(result).toContain('flowchart LR');
-    expect(result).toContain('users AS u');
-    expect(result).toContain('orders AS o');
-    expect(result).toContain('INNER JOIN');
+    expect(result).toContain('FROM<br/>---<br/>users.id<br/>users.name');
+    expect(result).toContain('INNER JOIN<br/>---<br/>users.id<br/>users.name<br/>orders.user_id<br/>orders.total_amount');
+    expect(result).toContain('SELECT u.id, u.name, o.total_amount');
   });
 
   it('should render CTE as subgraph', () => {

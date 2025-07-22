@@ -1,15 +1,15 @@
 flowchart LR
     node_0[FROM orders]
-    node_1["WHERE amount &gt; expr"]
+    node_1["WHERE<br/>---<br/>amount &gt; expr"]
     subgraph subquery_node_2 ["Subquery (scalar)"]
         direction TB
         subq_0_node_0[FROM orders]
         subq_0_node_1[amount]
-        subq_0_node_2["WHERE customer_id IN expr"]
+        subq_0_node_2["WHERE<br/>---<br/>customer_id IN expr"]
         subgraph subquery_subq_0_node_3 ["Subquery (in)"]
             direction TB
             subq_1_node_0[FROM customers]
-            subq_1_node_1["WHERE country = &#39;JP&#39;"]
+            subq_1_node_1["WHERE<br/>---<br/>country = &#39;JP&#39;"]
             subq_1_node_2["SELECT id"]
             subq_1_node_0 --> subq_1_node_1
             subq_1_node_1 --> subq_1_node_2

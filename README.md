@@ -5,6 +5,7 @@ A library and CLI tool for SQL visualization. Parse SQL strings and visualize da
 ## Features
 
 - 🎯 Comprehensive schema view with column-level data flow
+- 🔍 Intelligent column inference from SQL statements
 - 📦 Available as both library and CLI
 - 🌐 Works in both browser and Node.js
 - 📸 Schema snapshot generation to track transformations
@@ -142,7 +143,7 @@ Renders graph in specified format.
 
 - `options.format`: Output format
   - `'json'`: Complete graph structure as JSON
-  - `'mermaid'`: Mermaid flowchart diagram
+  - `'mermaid'`: Mermaid flowchart diagram with column-level details
   - `'dot'`: GraphViz DOT format with enhanced schema view
   - `'ascii'`: ASCII art diagram
 
@@ -152,13 +153,11 @@ Renders graph in specified format.
 
 ```mermaid
 flowchart LR
-    node_0[users]
-    node_1[FROM]
-    node_2[WHERE]
-    node_3[SELECT]
+    node_0["FROM<br/>---<br/>users.id<br/>users.name<br/>users.email"]
+    node_1["WHERE<br/>---<br/>active = true"]
+    node_2["SELECT<br/>---<br/>users.id<br/>users.name"]
     node_0 --> node_1
     node_1 --> node_2
-    node_2 --> node_3
 ```
 
 ### ASCII Art
