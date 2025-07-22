@@ -62,7 +62,8 @@ export const getTableName = (table: TableLike): string => {
 export const expressionToSQL = (expr: any): string => {
   if (!expr) return '';
 
-  switch (expr.type) {
+  try {
+    switch (expr.type) {
     case 'binary_expr':
       const left = expressionToSQL(expr.left);
       const right = expressionToSQL(expr.right);
@@ -187,6 +188,10 @@ export const expressionToSQL = (expr: any): string => {
         return String(expr.value);
       }
       return 'expr';
+    }
+  } catch (error) {
+    console.warn(`Failed to convert expression to SQL: ${error instanceof Error ? error.message : error}`);
+    return 'expr';
   }
 };
 

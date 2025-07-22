@@ -1,5 +1,6 @@
 import type { Graph } from '../types/ir.js';
 import type { RenderOptions } from '../types/renderer.js';
+import { RenderError } from '../errors.js';
 import { renderJson } from './json.js';
 import { renderMermaid } from './mermaid.js';
 import { renderAscii } from './ascii.js';
@@ -16,6 +17,6 @@ export const render = (graph: Graph, options: RenderOptions): string => {
     case 'dot':
       return renderDot(graph, options.jsonViewType);
     default:
-      throw new Error(`Unsupported render format: ${options.format}`);
+      throw new RenderError(`Unsupported render format: ${options.format}`, options.format);
   }
 };

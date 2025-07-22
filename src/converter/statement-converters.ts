@@ -1,5 +1,6 @@
 import type { Node, Edge } from '../types/ir.js';
 import type { ConversionContext } from './types.js';
+import { ConversionError } from '../errors.js';
 import type {
   AST,
   Select,
@@ -61,7 +62,7 @@ export const convertStatement = (ctx: ConversionContext, stmt: AST): { nodes: No
       // Skip CREATE statements - they are already processed for schema extraction
       return { nodes: [], edges: [] };
     default:
-      throw new Error(`Unsupported statement type: ${stmt.type}`);
+      throw new ConversionError(`Unsupported statement type: ${stmt.type}`, stmt.type);
   }
 };
 

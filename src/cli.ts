@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { parse, convert, render } from './index.js';
 import type { RenderOptions, JsonViewType, Dialect } from './index.js';
+import { ParseError, ConversionError, RenderError } from './errors.js';
 
 interface CliOptions {
   format: 'json' | 'mermaid' | 'ascii' | 'dot';
@@ -163,7 +164,18 @@ const main = async () => {
     }
     
   } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : String(error));
+    if (error instanceof ParseError) {
+      console.error('Parse Error:', error.message);
+      if (process.env.DEBUG) {
+        console.error('SQL:', error.sql);
+      }
+    } else if (error instanceof ConversionError) {
+      console.error('Conversion Error:', error.message);
+    } else if (error instanceof RenderError) {
+      console.error('Render Error:', error.message);
+    } else {
+      console.error('Error:', error instanceof Error ? error.message : String(error));
+    }
     process.exit(1);
   }
 };
