@@ -72,6 +72,8 @@ const formatNode = (node: Node): string => {
   switch (node.kind) {
     case 'relation':
       return `${nodeId}[${label}]`;
+    case 'subquery':
+      return `${nodeId}[["${label}"]]`;  // Double brackets for subquery styling
     case 'op':
       // Always show SQL details if available
       if (sql && (
@@ -113,6 +115,12 @@ const formatEdge = (edge: Edge, graph: Graph): string => {
   if (fromNode?.kind === 'op' && toNode?.label.startsWith('CTE:')) {
     const cteName = toNode.label.replace('CTE: ', '');
     return `${fromId} -->|CTE result| ${toId}`;
+  }
+  
+  // Handle subquery result edges
+  if (edge.kind === 'subqueryResult') {
+    const subqueryType = fromNode?.label.match(/\((\w+)\)/)?.[1] || 'result';
+    return `${fromId} -->|${subqueryType}| ${toId}`;
   }
   
   // Regular edge

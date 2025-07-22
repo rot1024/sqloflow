@@ -2,7 +2,9 @@ flowchart LR
     node_0[orders AS o]
     node_1[FROM orders AS o]
     node_2["WHERE o.total_amount = expr"]
-    node_3["SELECT o.id, o.total_amount"]
+    node_3[["Subquery (scalar)"]]
+    node_4["SELECT o.id, o.total_amount"]
     node_0 --> node_1
     node_1 --> node_2
-    node_2 --> node_3
+    node_3 -->|scalar| node_2
+    node_2 --> node_4

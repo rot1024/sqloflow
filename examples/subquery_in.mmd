@@ -2,7 +2,9 @@ flowchart LR
     node_0[users AS u]
     node_1[FROM users AS u]
     node_2["WHERE u.id IN expr"]
-    node_3["SELECT u.id, u.name"]
+    node_3[["Subquery (in)"]]
+    node_4["SELECT u.id, u.name"]
     node_0 --> node_1
     node_1 --> node_2
-    node_2 --> node_3
+    node_3 -->|in| node_2
+    node_2 --> node_4

@@ -42,7 +42,11 @@ describe('helpers', () => {
           expr: {
             type: 'aggr_func',
             name: 'COUNT',
-            args: { expr: { type: 'star', value: '*' } }
+            args: { 
+              expr: { type: 'star', value: '*' },
+              distinct: null,
+              orderby: null
+            }
           },
           as: null
         },
@@ -51,7 +55,9 @@ describe('helpers', () => {
             type: 'aggr_func',
             name: 'MAX',
             args: {
-              expr: { type: 'column_ref', table: null, column: 'total_amount' }
+              expr: { type: 'column_ref', table: null, column: 'total_amount' },
+              distinct: null,
+              orderby: null
             }
           },
           as: 'max_total'
@@ -67,11 +73,16 @@ describe('helpers', () => {
         {
           expr: {
             type: 'function',
-            name: 'COALESCE',
-            args: [
-              { type: 'column_ref', table: null, column: 'name' },
-              { type: 'string', value: 'Unknown' }
-            ]
+            name: {
+              name: [{ type: 'default', value: 'COALESCE' }]
+            },
+            args: {
+              type: 'expr_list',
+              value: [
+                { type: 'column_ref', table: null, column: 'name' },
+                { type: 'string', value: 'Unknown' }
+              ]
+            }
           },
           as: 'display_name'
         }

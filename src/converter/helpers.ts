@@ -256,3 +256,74 @@ export const joinToSQL = (table: Join): string => {
   const onClause = table.on ? ` ON ${expressionToSQL(table.on)}` : '';
   return `${joinType} ${tableName}${onClause}`;
 };
+
+// Subquery detection helpers
+export const detectSubqueryInExpression = (expr: any): { hasSubquery: boolean; subqueryType?: 'scalar' | 'in' | 'exists'; ast?: Select } => {
+  if (!expr) return { hasSubquery: false };
+
+  switch (expr.type) {
+    case 'expr_list':
+      // Scalar subquery in expression list
+      if (expr.value?.[0]?.ast) {
+        return { hasSubquery: true, subqueryType: 'scalar', ast: expr.value[0].ast };
+      }
+      break;
+
+    case 'function':
+      // EXISTS subquery
+      const funcName = typeof expr.name === 'string' ? expr.name : 
+                      expr.name?.name?.[0]?.value || '';
+      if (funcName === 'EXISTS' && expr.args?.type === 'expr_list' && expr.args.value?.[0]?.ast) {
+        return { hasSubquery: true, subqueryType: 'exists', ast: expr.args.value[0].ast };
+      }
+      break;
+
+    case 'binary_expr':
+      // Check for IN operator first
+      if (expr.operator === 'IN' || expr.operator === 'NOT IN') {
+        if (expr.right?.type === 'expr_list' && expr.right.value?.[0]?.ast) {
+          return { hasSubquery: true, subqueryType: 'in', ast: expr.right.value[0].ast };
+        }
+      }
+      
+      // Check if right side is a direct subquery (scalar subquery)
+      if (expr.right?.ast) {
+        return { hasSubquery: true, subqueryType: 'scalar', ast: expr.right.ast };
+      }
+      
+      // Recursively check both sides
+      const leftResult = detectSubqueryInExpression(expr.left);
+      if (leftResult.hasSubquery) return leftResult;
+      const rightResult = detectSubqueryInExpression(expr.right);
+      if (rightResult.hasSubquery) return rightResult;
+      break;
+
+    case 'select':
+      // Direct subquery reference
+      return { hasSubquery: true, subqueryType: 'scalar', ast: expr };
+    
+    default:
+      // Check if the expression itself has an ast property (direct subquery)
+      if (expr.ast) {
+        return { hasSubquery: true, subqueryType: 'scalar', ast: expr.ast };
+      }
+  }
+
+  return { hasSubquery: false };
+};
+
+// Create a subquery node for Phase 1 (simple detection and display)
+export const createSubqueryNode = (
+  ctx: ConversionContext,
+  subqueryType: 'scalar' | 'in' | 'exists',
+  ast?: Select
+): Node => {
+  const node: Node = {
+    id: `node_${ctx.nodeCounter++}`,
+    kind: 'subquery' as NodeKind,
+    label: `Subquery (${subqueryType})`,
+    sql: '(subquery)'
+  };
+  
+  return node;
+};

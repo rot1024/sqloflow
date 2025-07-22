@@ -207,6 +207,8 @@ const formatNodeLabel = (node: Node): string => {
   const { label, sql, kind } = node;
   
   switch (kind) {
+    case 'subquery':
+      return `[${label}]`;  // Add brackets to indicate subquery
     case 'op':
       // Always show SQL details if available
       if (sql && (

@@ -5,11 +5,13 @@ digraph sqloflow {
   // Node definitions
   node_0 [label="customers AS c", fillcolor=lightblue, style="filled,rounded"];
   node_1 [label="FROM customers AS c", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="SELECT c.customer_id, c.name", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="SELECT c.customer_id, c.name", fillcolor=lightgreen, style="filled,rounded"];
   node_2 [label="WHERE EXISTS(subquery)", fillcolor=lightyellow, style="filled,rounded"];
+  node_3 [label="Subquery (exists)", fillcolor=lavender, style="filled,rounded,dashed", shape=box3d];
 
   // Edges
   node_0 -> node_1 [color=black];
   node_1 -> node_2 [color=black];
-  node_2 -> node_3 [color=black];
+  node_3 -> node_2 [color=purple, style=bold, label="subquery result"];
+  node_2 -> node_4 [color=black];
 }

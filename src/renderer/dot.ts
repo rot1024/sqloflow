@@ -134,6 +134,8 @@ const getNodeStyle = (kind: string): string => {
       return ', fillcolor=lightyellow, style="filled,rounded"';
     case 'column':
       return ', fillcolor=lightcoral, style="filled,rounded", shape=ellipse';
+    case 'subquery':
+      return ', fillcolor=lavender, style="filled,rounded,dashed", shape=box3d';
     default:
       return '';
   }
@@ -149,6 +151,8 @@ const getEdgeStyle = (kind: string): string => {
       return 'color=green, style=dotted';
     case 'mapsTo':
       return 'color=red, style=dashed';
+    case 'subqueryResult':
+      return 'color=purple, style=bold, label="subquery result"';
     default:
       return '';
   }

@@ -4,6 +4,7 @@ digraph sqloflow {
 
   // Schema view with snapshots
   node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
+  node_3 [label="Subquery (in)", fillcolor=lavender, style="filled,rounded,dashed", shape=box3d];
   subgraph cluster_0 {
     label="Schema Snapshot 1";
     style=filled;
@@ -23,11 +24,12 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_3 [label="SELECT u.id, u.name", fillcolor=lightgreen, style="filled,rounded"];
+    node_4 [label="SELECT u.id, u.name", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Schema transformation edges
   node_0 -> node_1 [color=black];
   node_1 -> node_2 [color=black, label="schema change"];
-  node_2 -> node_3 [color=black, label="schema change"];
+  node_3 -> node_2 [color=purple, style=bold, label="subquery result"];
+  node_2 -> node_4 [color=black, label="schema change"];
 }

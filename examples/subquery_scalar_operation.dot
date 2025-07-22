@@ -5,11 +5,13 @@ digraph sqloflow {
   // Node definitions
   node_0 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
   node_1 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
   node_2 [label="WHERE o.total_amount = expr", fillcolor=lightyellow, style="filled,rounded"];
+  node_3 [label="Subquery (scalar)", fillcolor=lavender, style="filled,rounded,dashed", shape=box3d];
 
   // Edges
   node_0 -> node_1 [color=black];
   node_1 -> node_2 [color=black];
-  node_2 -> node_3 [color=black];
+  node_3 -> node_2 [color=purple, style=bold, label="subquery result"];
+  node_2 -> node_4 [color=black];
 }

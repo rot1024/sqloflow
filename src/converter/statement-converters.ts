@@ -29,7 +29,9 @@ import {
   selectListToSQL,
   groupByToSQL,
   orderByToSQL,
-  limitToSQL
+  limitToSQL,
+  detectSubqueryInExpression,
+  createSubqueryNode
 } from './helpers.js';
 import {
   createSnapshot,
@@ -99,6 +101,15 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     }
     lastNodeId = whereNode.id;
 
+    // Detect and create subquery nodes
+    const subqueryInfo = detectSubqueryInExpression(stmt.where);
+    if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType) {
+      const subqueryNode = createSubqueryNode(ctx, subqueryInfo.subqueryType, subqueryInfo.ast);
+      nodes.push(subqueryNode);
+      // Connect subquery to WHERE clause
+      edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, whereNode.id));
+    }
+
     // Create snapshot after WHERE (schema might have new inferred columns)
     createSnapshot(ctx, whereNode.id);
   }
@@ -136,6 +147,19 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     edges.push(createEdge(ctx, 'flow', lastNodeId, selectNode.id));
   }
   lastNodeId = selectNode.id;
+
+  // Detect subqueries in SELECT columns
+  for (const col of stmt.columns) {
+    if (col.expr) {
+      const subqueryInfo = detectSubqueryInExpression(col.expr);
+      if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType) {
+        const subqueryNode = createSubqueryNode(ctx, subqueryInfo.subqueryType, subqueryInfo.ast);
+        nodes.push(subqueryNode);
+        // Connect subquery to SELECT clause
+        edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, selectNode.id));
+      }
+    }
+  }
 
   // Apply SELECT transformation to track schema changes
   applySelectTransformation(ctx, selectNode.id, stmt.columns);

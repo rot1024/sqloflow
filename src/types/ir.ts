@@ -8,7 +8,8 @@ export type NodeKind =
   | "op"
   | "clause"
   | "relation"
-  | "column";
+  | "column"
+  | "subquery";
 
 export type Node = {
   id: string;
@@ -30,7 +31,8 @@ export type EdgeKind =
   | "flow"
   | "uses"
   | "defines"
-  | "mapsTo";
+  | "mapsTo"
+  | "subqueryResult";
 
 export type Edge = {
   id: string;
@@ -57,3 +59,10 @@ export type ColumnSchema = {
   type?: string;
   source?: string;
 };
+
+export interface SubqueryNode extends Node {
+  kind: "subquery";
+  subqueryType: "scalar" | "in" | "exists";
+  innerGraph?: Graph;  // サブクエリの内部グラフ (Phase 2で使用)
+  correlatedFields?: string[];  // 相関サブクエリの場合の外部参照フィールド
+}

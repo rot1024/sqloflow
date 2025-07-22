@@ -35,8 +35,12 @@ describe('parse', () => {
 
     expect(ast).toHaveLength(1);
     const selectAst = ast[0] as Select;
-    expect(selectAst.from).toHaveLength(2);
-    expect(selectAst.from[1].join).toBe('INNER JOIN');
+    expect(selectAst.from).not.toBeNull();
+    expect(Array.isArray(selectAst.from)).toBe(true);
+    if (Array.isArray(selectAst.from)) {
+      expect(selectAst.from).toHaveLength(2);
+      expect((selectAst.from[1] as any).join).toBe('INNER JOIN');
+    }
   });
 
   it('should parse SELECT with GROUP BY and HAVING', () => {
@@ -70,8 +74,11 @@ describe('parse', () => {
     expect(ast).toHaveLength(1);
     const selectAst = ast[0] as Select;
     expect(selectAst.with).toBeDefined();
-    expect(selectAst.with).toHaveLength(1);
-    expect(selectAst.with[0].name.value).toBe('recent_orders');
+    expect(selectAst.with).not.toBeNull();
+    if (selectAst.with) {
+      expect(selectAst.with).toHaveLength(1);
+      expect(selectAst.with[0].name.value).toBe('recent_orders');
+    }
   });
 
   it('should parse UPDATE statement', () => {
