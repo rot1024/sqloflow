@@ -1,0 +1,46 @@
+{
+  "name": "sqloflow",
+  "type": "module",
+  "version": "0.1.0",
+  "main": "./dist/sqloflow.cjs.js",
+  "module": "./dist/sqloflow.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/sqloflow.es.js",
+      "require": "./dist/sqloflow.cjs.js"
+    }
+  },
+  "description": "SQL Visualization Library",
+  "bin": {
+    "sqloflow": "./dist/cli.js"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "build": "npm run build:lib && npm run build:cli",
+    "build:lib": "vite build",
+    "build:cli": "tsc -p tsconfig.cli.json",
+    "dev": "vite build --watch",
+    "prepublishOnly": "npm run build",
+    "type": "tsc --noEmit"
+  },
+  "repository": "https://github.com/rot1024/sqloflow.git",
+  "author": "rot1024 <aayhrot@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rot1024/sqloflow/issues"
+  },
+  "homepage": "https://github.com/rot1024/sqloflow#readme",
+  "dependencies": {
+    "node-sql-parser": "^5.3.10"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.5",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
+  }
+}
