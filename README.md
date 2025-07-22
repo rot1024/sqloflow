@@ -253,10 +253,11 @@ node generate.js  # Regenerate all examples
 
 Generated files:
 - `*.sql` - Source SQL queries
-- `*_operation.dot` / `*_schema.dot` - DOT format files
-- `*_operation.png` / `*_schema.png` - Rendered images
+- `*.dot` - DOT format files
+- `*.png` - Rendered images
 - `*.mmd` - Mermaid diagrams
 - `*.txt` - ASCII art visualizations
+- `*.json` - JSON output of graph structure
 
 ## Supported SQL Statements
 

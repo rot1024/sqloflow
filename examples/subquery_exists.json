@@ -1,0 +1,169 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM customers AS c"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "EXISTS(...)"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (exists)",
+      "sql": "(subquery)",
+      "subqueryType": "exists",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM orders AS o"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "o.customer_id = c.customer_id AND o.status = 'pending'"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "1"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_1"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          }
+        ]
+      },
+      "correlatedFields": [
+        "c.customer_id"
+      ]
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "c.customer_id, c.name"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "c": {
+          "name": "customers",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "c": {
+          "name": "customers",
+          "columns": [
+            {
+              "id": "c.customer_id",
+              "name": "customer_id",
+              "source": "c"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.customer_id",
+              "name": "customer_id",
+              "source": "o"
+            },
+            {
+              "id": "o.status",
+              "name": "status",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.c.customer_id",
+              "name": "c.customer_id",
+              "source": "c"
+            },
+            {
+              "id": "_result.c.name",
+              "name": "c.name",
+              "source": "c"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

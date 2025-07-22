@@ -1,0 +1,163 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM orders AS o"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "o.total_amount = expr"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (scalar)",
+      "sql": "(subquery)",
+      "subqueryType": "scalar",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM orders"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "customer_id = o.customer_id"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "MAX(total_amount)"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_1"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          }
+        ]
+      },
+      "correlatedFields": [
+        "o.customer_id"
+      ]
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "o.id, o.total_amount"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "o": {
+          "name": "orders",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.total_amount",
+              "name": "total_amount",
+              "source": "o"
+            },
+            {
+              "id": "o.customer_id",
+              "name": "customer_id",
+              "source": "o"
+            }
+          ]
+        },
+        "orders": {
+          "name": "orders",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.o.id",
+              "name": "o.id",
+              "source": "o"
+            },
+            {
+              "id": "_result.o.total_amount",
+              "name": "o.total_amount",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

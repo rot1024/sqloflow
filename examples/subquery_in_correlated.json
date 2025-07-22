@@ -1,0 +1,174 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM products AS p"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "p.category_id IN expr"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (in)",
+      "sql": "(subquery)",
+      "subqueryType": "in",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM categories AS c"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "c.status = 'active' AND c.created_date > p.launch_date"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "c.category_id"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_1"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          }
+        ]
+      },
+      "correlatedFields": [
+        "p.launch_date"
+      ]
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "p.product_id, p.name"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "p": {
+          "name": "products",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "p": {
+          "name": "products",
+          "columns": [
+            {
+              "id": "p.category_id",
+              "name": "category_id",
+              "source": "p"
+            },
+            {
+              "id": "p.launch_date",
+              "name": "launch_date",
+              "source": "p"
+            }
+          ]
+        },
+        "c": {
+          "name": "categories",
+          "columns": [
+            {
+              "id": "c.status",
+              "name": "status",
+              "source": "c"
+            },
+            {
+              "id": "c.created_date",
+              "name": "created_date",
+              "source": "c"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.p.product_id",
+              "name": "p.product_id",
+              "source": "p"
+            },
+            {
+              "id": "_result.p.name",
+              "name": "p.name",
+              "source": "p"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

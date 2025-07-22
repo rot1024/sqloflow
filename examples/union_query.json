@@ -1,0 +1,191 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM users"
+    },
+    {
+      "id": "node_1",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "id, name, 'user' AS source"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "UNION ALL",
+      "sql": "UNION ALL"
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM organizations"
+    },
+    {
+      "id": "node_4",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "id, company_name AS name, 'org' AS source"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "flow",
+      "from": {
+        "node": "node_4"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "users": {
+          "name": "users",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.id",
+              "name": "id",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.name",
+              "name": "name",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.source",
+              "name": "source",
+              "source": "_expression"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.id",
+              "name": "id",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.name",
+              "name": "name",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.source",
+              "name": "source",
+              "source": "_expression"
+            }
+          ]
+        },
+        "organizations": {
+          "name": "organizations",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_4",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.id",
+              "name": "id",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.name",
+              "name": "name",
+              "source": "_unknown"
+            },
+            {
+              "id": "_result.source",
+              "name": "source",
+              "source": "_expression"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_2",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.id",
+              "name": "id",
+              "source": "_result"
+            },
+            {
+              "id": "_result.name",
+              "name": "name",
+              "source": "_result"
+            },
+            {
+              "id": "_result.source",
+              "name": "source",
+              "source": "_result"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

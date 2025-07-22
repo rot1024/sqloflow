@@ -58,6 +58,11 @@ async function generateVisualizations() {
         const ascii = render(graph, { format: 'ascii' });
         await writeFile(join(__dirname, `${baseName}.txt`), ascii);
         
+        // Generate JSON format
+        console.log('  Generating JSON output...');
+        const json = render(graph, { format: 'json' });
+        await writeFile(join(__dirname, `${baseName}.json`), json);
+        
         console.log('  Done!');
       } catch (error) {
         console.error(`  Error processing ${sqlFile}:`, error.message);

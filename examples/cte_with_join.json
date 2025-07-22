@@ -1,0 +1,339 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM orders"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "created_at >= CURRENT_DATE() - INTERVAL '30 days'"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "GROUP BY",
+      "sql": "customer_id"
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "customer_id, MAX(total_amount) AS max_total"
+    },
+    {
+      "id": "node_4",
+      "kind": "relation",
+      "label": "CTE: recent_max",
+      "sql": "WITH recent_max AS (...)"
+    },
+    {
+      "id": "node_5",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM orders AS o"
+    },
+    {
+      "id": "node_6",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "recent_max AS r ON r.customer_id = o.customer_id"
+    },
+    {
+      "id": "node_7",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "o.total_amount = r.max_total"
+    },
+    {
+      "id": "node_8",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "o.id, o.total_amount"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "defines",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    },
+    {
+      "id": "edge_4",
+      "kind": "flow",
+      "from": {
+        "node": "node_5"
+      },
+      "to": {
+        "node": "node_6"
+      }
+    },
+    {
+      "id": "edge_5",
+      "kind": "flow",
+      "from": {
+        "node": "node_4"
+      },
+      "to": {
+        "node": "node_6"
+      }
+    },
+    {
+      "id": "edge_6",
+      "kind": "flow",
+      "from": {
+        "node": "node_6"
+      },
+      "to": {
+        "node": "node_7"
+      }
+    },
+    {
+      "id": "edge_7",
+      "kind": "flow",
+      "from": {
+        "node": "node_7"
+      },
+      "to": {
+        "node": "node_8"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "orders": {
+          "name": "orders",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "orders": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "orders.created_at",
+              "name": "created_at",
+              "source": "orders"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_2",
+      "relations": {
+        "_grouped": {
+          "name": "_grouped",
+          "columns": [
+            {
+              "id": "_grouped.customer_id",
+              "name": "customer_id",
+              "source": "_inferred"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.customer_id",
+              "name": "customer_id",
+              "source": "_inferred"
+            },
+            {
+              "id": "_result.max_total",
+              "name": "max_total",
+              "type": "numeric",
+              "source": "_aggregate"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_5",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.customer_id",
+              "name": "customer_id",
+              "source": "_inferred"
+            },
+            {
+              "id": "_result.max_total",
+              "name": "max_total",
+              "type": "numeric",
+              "source": "_aggregate"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_6",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.customer_id",
+              "name": "customer_id",
+              "source": "_inferred"
+            },
+            {
+              "id": "_result.max_total",
+              "name": "max_total",
+              "type": "numeric",
+              "source": "_aggregate"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.customer_id",
+              "name": "customer_id",
+              "source": "o"
+            }
+          ]
+        },
+        "r": {
+          "name": "recent_max",
+          "columns": [
+            {
+              "id": "r.customer_id",
+              "name": "customer_id",
+              "source": "r"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_7",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.customer_id",
+              "name": "customer_id",
+              "source": "_inferred"
+            },
+            {
+              "id": "_result.max_total",
+              "name": "max_total",
+              "type": "numeric",
+              "source": "_aggregate"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.customer_id",
+              "name": "customer_id",
+              "source": "o"
+            },
+            {
+              "id": "o.total_amount",
+              "name": "total_amount",
+              "source": "o"
+            }
+          ]
+        },
+        "r": {
+          "name": "recent_max",
+          "columns": [
+            {
+              "id": "r.customer_id",
+              "name": "customer_id",
+              "source": "r"
+            },
+            {
+              "id": "r.max_total",
+              "name": "max_total",
+              "source": "r"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_8",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.o.id",
+              "name": "o.id",
+              "source": "o"
+            },
+            {
+              "id": "_result.o.total_amount",
+              "name": "o.total_amount",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

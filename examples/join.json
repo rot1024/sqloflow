@@ -1,0 +1,162 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM users AS u"
+    },
+    {
+      "id": "node_1",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "orders AS o ON u.id = o.user_id"
+    },
+    {
+      "id": "node_2",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "o.total > 100"
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "u.name, o.total"
+    },
+    {
+      "id": "node_4",
+      "kind": "op",
+      "label": "ORDER BY",
+      "sql": "o.total DESC"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "flow",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "u": {
+          "name": "users",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "u": {
+          "name": "users",
+          "columns": [
+            {
+              "id": "u.id",
+              "name": "id",
+              "source": "u"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.user_id",
+              "name": "user_id",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_2",
+      "relations": {
+        "u": {
+          "name": "users",
+          "columns": [
+            {
+              "id": "u.id",
+              "name": "id",
+              "source": "u"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.user_id",
+              "name": "user_id",
+              "source": "o"
+            },
+            {
+              "id": "o.total",
+              "name": "total",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.u.name",
+              "name": "u.name",
+              "source": "u"
+            },
+            {
+              "id": "_result.o.total",
+              "name": "o.total",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

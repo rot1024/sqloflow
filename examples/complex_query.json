@@ -1,0 +1,187 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM products"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "status = 'active' AND price > 10"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "GROUP BY",
+      "sql": "category"
+    },
+    {
+      "id": "node_3",
+      "kind": "clause",
+      "label": "HAVING",
+      "sql": "COUNT(*) > 5"
+    },
+    {
+      "id": "node_4",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price"
+    },
+    {
+      "id": "node_5",
+      "kind": "op",
+      "label": "ORDER BY",
+      "sql": "total_products DESC, avg_price ASC"
+    },
+    {
+      "id": "node_6",
+      "kind": "op",
+      "label": "LIMIT",
+      "sql": "10 OFFSET 20"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "flow",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    },
+    {
+      "id": "edge_4",
+      "kind": "flow",
+      "from": {
+        "node": "node_4"
+      },
+      "to": {
+        "node": "node_5"
+      }
+    },
+    {
+      "id": "edge_5",
+      "kind": "flow",
+      "from": {
+        "node": "node_5"
+      },
+      "to": {
+        "node": "node_6"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "products": {
+          "name": "products",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "products": {
+          "name": "products",
+          "columns": [
+            {
+              "id": "products.status",
+              "name": "status",
+              "source": "products"
+            },
+            {
+              "id": "products.price",
+              "name": "price",
+              "source": "products"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_2",
+      "relations": {
+        "_grouped": {
+          "name": "_grouped",
+          "columns": [
+            {
+              "id": "_grouped.category",
+              "name": "category",
+              "source": "_inferred"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_4",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.category",
+              "name": "category",
+              "source": "_inferred"
+            },
+            {
+              "id": "_result.total_products",
+              "name": "total_products",
+              "type": "numeric",
+              "source": "_aggregate"
+            },
+            {
+              "id": "_result.avg_price",
+              "name": "avg_price",
+              "type": "numeric",
+              "source": "_aggregate"
+            },
+            {
+              "id": "_result.max_price",
+              "name": "max_price",
+              "type": "numeric",
+              "source": "_aggregate"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

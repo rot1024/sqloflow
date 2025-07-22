@@ -1,0 +1,233 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM orders"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "amount > expr"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (scalar)",
+      "sql": "(subquery)",
+      "subqueryType": "scalar",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM orders"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "column",
+            "label": "amount",
+            "sql": "unknown",
+            "parent": "node_0"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "customer_id IN expr"
+          },
+          {
+            "id": "subq_0_node_3",
+            "kind": "subquery",
+            "label": "Subquery (in)",
+            "sql": "(subquery)",
+            "subqueryType": "in",
+            "innerGraph": {
+              "nodes": [
+                {
+                  "id": "subq_1_node_0",
+                  "kind": "op",
+                  "label": "FROM",
+                  "sql": "FROM customers"
+                },
+                {
+                  "id": "subq_1_node_1",
+                  "kind": "clause",
+                  "label": "WHERE",
+                  "sql": "country = 'JP'"
+                },
+                {
+                  "id": "subq_1_node_2",
+                  "kind": "op",
+                  "label": "SELECT",
+                  "sql": "id"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "subq_1_edge_0",
+                  "kind": "flow",
+                  "from": {
+                    "node": "subq_1_node_0"
+                  },
+                  "to": {
+                    "node": "subq_1_node_1"
+                  }
+                },
+                {
+                  "id": "subq_1_edge_1",
+                  "kind": "flow",
+                  "from": {
+                    "node": "subq_1_node_1"
+                  },
+                  "to": {
+                    "node": "subq_1_node_2"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "subq_0_node_4",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "AVG(amount)"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "defines",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          },
+          {
+            "id": "subq_0_edge_2",
+            "kind": "subqueryResult",
+            "from": {
+              "node": "subq_0_node_3"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          },
+          {
+            "id": "subq_0_edge_3",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_2"
+            },
+            "to": {
+              "node": "subq_0_node_4"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "*"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "orders": {
+          "name": "orders",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "orders": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "orders.customer_id",
+              "name": "customer_id",
+              "source": "orders"
+            },
+            {
+              "id": "orders.country",
+              "name": "country",
+              "source": "orders"
+            }
+          ]
+        },
+        "customers": {
+          "name": "customers",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.*",
+              "name": "*",
+              "source": "_unknown"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

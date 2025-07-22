@@ -1,0 +1,161 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM users AS u"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "u.id IN expr"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (in)",
+      "sql": "(subquery)",
+      "subqueryType": "in",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM orders AS o"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "o.total_amount > 100000"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "o.user_id"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_1"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "u.id, u.name"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "stepId": "node_0",
+      "relations": {
+        "u": {
+          "name": "users",
+          "columns": []
+        }
+      }
+    },
+    {
+      "stepId": "node_1",
+      "relations": {
+        "u": {
+          "name": "users",
+          "columns": [
+            {
+              "id": "u.id",
+              "name": "id",
+              "source": "u"
+            }
+          ]
+        },
+        "o": {
+          "name": "orders",
+          "columns": [
+            {
+              "id": "o.total_amount",
+              "name": "total_amount",
+              "source": "o"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "node_3",
+      "relations": {
+        "_result": {
+          "name": "_result",
+          "columns": [
+            {
+              "id": "_result.u.id",
+              "name": "u.id",
+              "source": "u"
+            },
+            {
+              "id": "_result.u.name",
+              "name": "u.name",
+              "source": "u"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
