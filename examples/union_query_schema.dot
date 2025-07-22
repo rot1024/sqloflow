@@ -19,7 +19,7 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_2 [label="SELECT id, name, expr", fillcolor=lightgreen, style="filled,rounded"];
+    node_2 [label="SELECT id, name, 'user' AS source", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
@@ -33,7 +33,7 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_6 [label="SELECT id, company_name AS name, expr", fillcolor=lightgreen, style="filled,rounded"];
+    node_6 [label="SELECT id, company_name AS name, 'org' AS source", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Schema transformation edges

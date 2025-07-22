@@ -1,7 +1,7 @@
 import type { Graph, Node, Edge } from '../types/ir.js';
 import type { JsonViewType } from '../types/renderer.js';
 
-interface JsonNode {
+export interface JsonNode {
   id: string;
   type: string;
   label: string;
@@ -10,7 +10,7 @@ interface JsonNode {
   meta?: Record<string, any>;
 }
 
-interface JsonEdge {
+export interface JsonEdge {
   id: string;
   type: string;
   from: string;
@@ -19,7 +19,7 @@ interface JsonEdge {
   meta?: Record<string, any>;
 }
 
-interface JsonOutput {
+export interface JsonOutput {
   nodes: JsonNode[];
   edges: JsonEdge[];
   view: JsonViewType;

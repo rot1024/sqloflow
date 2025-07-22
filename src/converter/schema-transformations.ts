@@ -1,5 +1,6 @@
 import type { ConversionContext } from './types.js';
 import type { SchemaSnapshot, RelationSchema, ColumnSchema } from '../types/ir.js';
+import type { Column, ExpressionValue, ColumnRef, Binary, Function as FunctionExpr, AggrFunc, Select } from 'node-sql-parser';
 import { getColumnName } from './helpers.js';
 
 export const createSnapshot = (ctx: ConversionContext, stepId: string): void => {
@@ -19,7 +20,7 @@ export const applySchemaTransformation = (
   createSnapshot(ctx, nodeId);
 };
 
-export const applySelectTransformation = (ctx: ConversionContext, nodeId: string, columns: any[]): void => {
+export const applySelectTransformation = (ctx: ConversionContext, nodeId: string, columns: Column[]): void => {
   applySchemaTransformation(ctx, nodeId, (schema) => {
     const newSchema: Record<string, RelationSchema> = {};
     
@@ -50,8 +51,8 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
         if (col.expr) {
           if (col.expr.type === 'column_ref') {
             const colName = getColumnName(col.expr);
-            const alias = col.as || colName;
-            const tableName = col.expr.table;
+            const alias = typeof col.as === 'string' ? col.as : col.as?.value || colName;
+            const tableName = 'table' in col.expr ? col.expr.table : null;
             
             // Find the source column in current schema
             let sourceColumn: ColumnSchema | undefined;
@@ -59,7 +60,10 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
               sourceColumn = relation.columns.find(c => {
                 if (tableName) {
                   // If table is specified, match table.column format
-                  return c.name === col.expr.column || c.id === `${tableName}.${col.expr.column}`;
+                  const columnValue = 'column' in col.expr && typeof col.expr.column === 'string' 
+                    ? col.expr.column 
+                    : colName;
+                  return c.name === columnValue || c.id === `${tableName}.${columnValue}`;
                 }
                 return c.name === colName || c.id === colName;
               });
@@ -68,9 +72,13 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
             
             // If column not found in schema, infer it
             if (!sourceColumn) {
+              let columnValue = colName;
+              if ('column' in col.expr) {
+                columnValue = typeof col.expr.column === 'string' ? col.expr.column : colName;
+              }
               sourceColumn = {
-                id: tableName ? `${tableName}.${col.expr.column}` : colName,
-                name: col.expr.column || colName,
+                id: tableName ? `${tableName}.${columnValue}` : colName,
+                name: columnValue,
                 type: undefined, // Unknown type
                 source: tableName || '_unknown'
               };
@@ -82,9 +90,9 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
               type: sourceColumn.type,
               source: sourceColumn.source
             });
-          } else if (col.expr.type === 'aggr_func') {
-            const funcName = col.expr.name.toUpperCase();
-            const alias = col.as || funcName;
+          } else if (col.expr.type === 'aggr_func' && 'name' in col.expr) {
+            const funcName = typeof col.expr.name === 'string' ? col.expr.name.toUpperCase() : 'UNKNOWN';
+            const alias = typeof col.as === 'string' ? col.as : col.as?.value || funcName;
             
             resultRelation.columns.push({
               id: `_result.${alias}`,
@@ -94,7 +102,7 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
             });
           } else {
             // Handle other expression types (constants, functions, etc.)
-            const alias = col.as || 'expr';
+            const alias = typeof col.as === 'string' ? col.as : col.as?.value || 'expr';
             resultRelation.columns.push({
               id: `_result.${alias}`,
               name: alias,
@@ -127,7 +135,7 @@ export const applyJoinTransformation = (ctx: ConversionContext, nodeId: string, 
   });
 };
 
-export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: string, groupByColumns: any): void => {
+export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: string, groupByColumns: Select['groupby']): void => {
   applySchemaTransformation(ctx, nodeId, (schema) => {
     const newSchema: Record<string, RelationSchema> = {};
     
@@ -142,15 +150,19 @@ export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: strin
     for (const col of columns) {
       // Handle different GROUP BY formats
       let colName: string;
-      if (typeof col === 'object') {
-        if (col.type === 'column_ref') {
-          // Extract column name from column_ref
-          colName = col.column?.expr?.value || col.column || 'expr';
+      if (col && typeof col === 'object' && 'type' in col && col.type === 'column_ref') {
+        // Extract column name from column_ref
+        const columnRef = col as ColumnRef;
+        if ('column' in columnRef) {
+          colName = typeof columnRef.column === 'string' 
+            ? columnRef.column 
+            : (columnRef.column as any)?.expr?.value || 'expr';
         } else {
-          colName = col.column || 'expr';
+          // ColumnRefExpr
+          colName = 'expr';
         }
       } else {
-        colName = col;
+        colName = 'expr';
       }
       
       // Find the source column
@@ -182,16 +194,30 @@ export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: strin
 };
 
 // Extract column references from WHERE/ON expressions and add to schema
-export const inferColumnsFromExpression = (ctx: ConversionContext, expr: any): void => {
+export const inferColumnsFromExpression = (ctx: ConversionContext, expr: ExpressionValue | null): void => {
   if (!expr) return;
   
-  if (expr.type === 'binary_expr') {
-    inferColumnsFromExpression(ctx, expr.left);
-    inferColumnsFromExpression(ctx, expr.right);
+  if (expr.type === 'binary_expr' && 'left' in expr && 'right' in expr) {
+    inferColumnsFromExpression(ctx, expr.left as ExpressionValue);
+    inferColumnsFromExpression(ctx, expr.right as ExpressionValue);
   } else if (expr.type === 'column_ref') {
-    const tableName = expr.table;
-    // Extract column name from nested structure
-    const columnName = expr.column?.expr?.value || expr.column;
+    let tableName: string | null = null;
+    let columnName: string | undefined;
+    
+    if ('table' in expr) {
+      // ColumnRefItem
+      tableName = expr.table;
+      columnName = typeof expr.column === 'string' 
+        ? expr.column 
+        : (expr.column as any)?.expr?.value;
+    } else if ('expr' in expr && expr.expr) {
+      // ColumnRefExpr
+      const item = expr.expr as any; // ColumnRefItem inside ColumnRefExpr
+      tableName = item.table || null;
+      columnName = typeof item.column === 'string' 
+        ? item.column 
+        : item.column?.expr?.value;
+    }
     
     if (columnName && typeof columnName === 'string') {
       // Find the relation to add the column to
@@ -223,9 +249,9 @@ export const inferColumnsFromExpression = (ctx: ConversionContext, expr: any): v
         }
       }
     }
-  } else if (expr.type === 'function') {
+  } else if (expr.type === 'function' && 'args' in expr) {
     // Process function arguments
-    if (expr.args && expr.args.value) {
+    if (expr.args && 'value' in expr.args && Array.isArray(expr.args.value)) {
       for (const arg of expr.args.value) {
         inferColumnsFromExpression(ctx, arg);
       }

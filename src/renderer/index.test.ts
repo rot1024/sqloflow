@@ -44,8 +44,8 @@ describe('render', () => {
     const ir = convert(ast);
     
     const options = {
-      format: 'unknown'
-    } as any;
+      format: 'unknown' as any
+    };
     
     expect(() => render(ir, options)).toThrow('Unsupported render format');
   });

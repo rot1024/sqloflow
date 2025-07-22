@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from './parser';
+import type { Select, Update, Insert_Replace, Delete } from 'node-sql-parser';
 
 describe('parse', () => {
 
@@ -9,7 +10,7 @@ describe('parse', () => {
 
     expect(ast).toHaveLength(1);
     expect(ast[0].type).toBe('select');
-    const selectAst = ast[0] as any;
+    const selectAst = ast[0] as Select;
     expect(selectAst.columns).toHaveLength(2);
     expect(selectAst.from).toHaveLength(1);
   });
@@ -20,7 +21,7 @@ describe('parse', () => {
 
     expect(ast).toHaveLength(1);
     expect(ast[0].type).toBe('select');
-    const selectAst = ast[0] as any;
+    const selectAst = ast[0] as Select;
     expect(selectAst.where).toBeDefined();
   });
 
@@ -33,7 +34,7 @@ describe('parse', () => {
     const ast = parse(sql);
 
     expect(ast).toHaveLength(1);
-    const selectAst = ast[0] as any;
+    const selectAst = ast[0] as Select;
     expect(selectAst.from).toHaveLength(2);
     expect(selectAst.from[1].join).toBe('INNER JOIN');
   });
@@ -48,7 +49,7 @@ describe('parse', () => {
     const ast = parse(sql);
 
     expect(ast).toHaveLength(1);
-    const selectAst = ast[0] as any;
+    const selectAst = ast[0] as Select;
     expect(selectAst.groupby).toBeDefined();
     expect(selectAst.having).toBeDefined();
   });
@@ -67,7 +68,7 @@ describe('parse', () => {
     const ast = parse(sql);
 
     expect(ast).toHaveLength(1);
-    const selectAst = ast[0] as any;
+    const selectAst = ast[0] as Select;
     expect(selectAst.with).toBeDefined();
     expect(selectAst.with).toHaveLength(1);
     expect(selectAst.with[0].name.value).toBe('recent_orders');
@@ -79,7 +80,7 @@ describe('parse', () => {
 
     expect(ast).toHaveLength(1);
     expect(ast[0].type).toBe('update');
-    const updateAst = ast[0] as any;
+    const updateAst = ast[0] as Update;
     expect(updateAst.table).toHaveLength(1);
     expect(updateAst.where).toBeDefined();
   });

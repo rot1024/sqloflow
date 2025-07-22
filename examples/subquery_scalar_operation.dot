@@ -6,7 +6,7 @@ digraph sqloflow {
   node_0 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
   node_1 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
   node_3 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
-  node_2 [label="WHERE o.total_amount = {\"tableList\":[\"select::null::orders\"],\"columnList\":[\"select::orders::id\",\"select::orders::total_amount\",\"select::null::total_amount\",\"select::null::customer_id\",\"select::orders::customer_id\"],\"ast\":{\"with\":null,\"type\":\"select\",\"options\":null,\"distinct\":{\"type\":null},\"columns\":[{\"type\":\"expr\",\"expr\":{\"type\":\"aggr_func\",\"name\":\"MAX\",\"args\":{\"expr\":{\"type\":\"column_ref\",\"table\":null,\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"total_amount\"}},\"collate\":null}},\"over\":null},\"as\":null}],\"into\":{\"position\":null},\"from\":[{\"db\":null,\"table\":\"orders\",\"as\":null}],\"where\":{\"type\":\"binary_expr\",\"operator\":\"=\",\"left\":{\"type\":\"column_ref\",\"table\":null,\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"customer_id\"}},\"collate\":null},\"right\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"customer_id\"}},\"collate\":null}},\"groupby\":null,\"having\":null,\"orderby\":null,\"limit\":{\"seperator\":\"\",\"value\":[]},\"window\":null},\"parentheses\":true}", fillcolor=lightyellow, style="filled,rounded"];
+  node_2 [label="WHERE o.total_amount = expr", fillcolor=lightyellow, style="filled,rounded"];
 
   // Edges
   node_0 -> node_1 [color=black];

@@ -26,7 +26,7 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: _grouped
-    node_3 [label="GROUP BY", fillcolor=lightgreen, style="filled,rounded"];
+    node_3 [label="GROUP BY category", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_3 {
     label="Schema Snapshot 4";

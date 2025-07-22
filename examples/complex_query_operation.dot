@@ -5,7 +5,7 @@ digraph sqloflow {
   // Node definitions
   node_0 [label="products", fillcolor=lightblue, style="filled,rounded"];
   node_1 [label="FROM products", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="GROUP BY", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="GROUP BY category", fillcolor=lightgreen, style="filled,rounded"];
   node_5 [label="SELECT category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price", fillcolor=lightgreen, style="filled,rounded"];
   node_6 [label="ORDER BY total_products DESC, avg_price ASC", fillcolor=lightgreen, style="filled,rounded"];
   node_7 [label="LIMIT 10 OFFSET 20", fillcolor=lightgreen, style="filled,rounded"];

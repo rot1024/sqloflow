@@ -8,7 +8,7 @@ digraph sqloflow {
   node_6 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
   node_8 [label="recent_max AS r", fillcolor=lightblue, style="filled,rounded"];
   node_1 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="GROUP BY", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="GROUP BY customer_id", fillcolor=lightgreen, style="filled,rounded"];
   node_4 [label="SELECT customer_id, MAX(total_amount) AS max_total", fillcolor=lightgreen, style="filled,rounded"];
   node_7 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
   node_9 [label="INNER JOIN INNER JOIN recent_max AS r ON r.customer_id = o.customer_id", fillcolor=lightgreen, style="filled,rounded"];

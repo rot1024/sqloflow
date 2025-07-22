@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from '../parser.js';
 import { convert } from '../converter/index.js';
-import { renderJson } from './json.js';
+import { renderJson, type JsonOutput } from './json.js';
 
 describe('JSON renderer', () => {
   it('should render operation view', () => {
@@ -17,7 +17,7 @@ describe('JSON renderer', () => {
     expect(json.edges).toBeDefined();
     
     // Operation view includes op/clause/relation nodes
-    const nodeTypes = json.nodes.map((n: any) => n.type);
+    const nodeTypes = (json as JsonOutput).nodes.map(n => n.type);
     expect(nodeTypes).toContain('op');
     expect(nodeTypes).toContain('clause');
     expect(nodeTypes).toContain('relation');
@@ -51,16 +51,16 @@ describe('JSON renderer', () => {
     const schemaJson = JSON.parse(schemaResult);
     
     // Operation view should have op nodes
-    const operationNodeTypes = operationJson.nodes.map((n: any) => n.type);
+    const operationNodeTypes = (operationJson as JsonOutput).nodes.map(n => n.type);
     expect(operationNodeTypes).toContain('op');
     
     // Schema view should have relation and column nodes
-    const schemaNodeTypes = schemaJson.nodes.map((n: any) => n.type);
+    const schemaNodeTypes = (schemaJson as JsonOutput).nodes.map(n => n.type);
     expect(schemaNodeTypes).toContain('relation');
     expect(schemaNodeTypes).toContain('column');
     
     // Schema view with column nodes should not have op/clause in filtered result
-    const schemaOpNodes = schemaJson.nodes.filter((n: any) => n.type === 'op' || n.type === 'clause');
+    const schemaOpNodes = (schemaJson as JsonOutput).nodes.filter(n => n.type === 'op' || n.type === 'clause');
     expect(schemaOpNodes.length).toBe(0);
   });
 

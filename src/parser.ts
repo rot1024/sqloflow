@@ -1,4 +1,4 @@
-import sqlParser from 'node-sql-parser';
+import sqlParser, { type AST } from 'node-sql-parser';
 
 export type Dialect = 'postgresql' | 'mysql' | 'sqlite' | 'mariadb' | 'transactsql';
 
@@ -14,6 +14,6 @@ export const parse = (sql: string, dialect: Dialect = 'postgresql') => {
   }
 };
 
-export const toSQL = (ast: any, dialect: Dialect = 'postgresql') => {
+export const toSQL = (ast: AST[], dialect: Dialect = 'postgresql') => {
   return parser.sqlify(ast, { database: dialect });
 };

@@ -24,7 +24,8 @@
     "build:cli": "tsc -p tsconfig.cli.json",
     "dev": "vite build --watch",
     "prepublishOnly": "npm run build",
-    "type": "tsc --noEmit"
+    "type": "tsc --noEmit",
+    "example": "node ./examples/generate.js"
   },
   "repository": "https://github.com/rot1024/sqloflow.git",
   "author": "rot1024 <aayhrot@gmail.com>",

@@ -1,7 +1,7 @@
 flowchart LR
     node_0[users AS u]
     node_1[FROM users AS u]
-    node_2["WHERE u.id IN {&quot;tableList&quot;:[&quot;select::null::orders&quot;],&quot;columnList&quot;:[&quot;select::users::id&quot;,&quot;select::users::name&quot;,&quot;select::orders::user_id&quot;,&quot;select::orders::total_amount&quot;],&quot;ast&quot;:{&quot;with&quot;:null,&quot;type&quot;:&quot;select&quot;,&quot;options&quot;:null,&quot;distinct&quot;:{&quot;type&quot;:null},&quot;columns&quot;:[{&quot;type&quot;:&quot;expr&quot;,&quot;expr&quot;:{&quot;type&quot;:&quot;column_ref&quot;,&quot;table&quot;:&quot;o&quot;,&quot;column&quot;:{&quot;expr&quot;:{&quot;type&quot;:&quot;default&quot;,&quot;value&quot;:&quot;user_id&quot;}},&quot;collate&quot;:null},&quot;as&quot;:null}],&quot;into&quot;:{&quot;position&quot;:null},&quot;from&quot;:[{&quot;db&quot;:null,&quot;table&quot;:&quot;orders&quot;,&quot;as&quot;:&quot;o&quot;}],&quot;where&quot;:{&quot;type&quot;:&quot;binary_expr&quot;,&quot;operator&quot;:&quot;&gt;&quot;,&quot;left&quot;:{&quot;type&quot;:&quot;column_ref&quot;,&quot;table&quot;:&quot;o&quot;,&quot;column&quot;:{&quot;expr&quot;:{&quot;type&quot;:&quot;default&quot;,&quot;value&quot;:&quot;total_amount&quot;}},&quot;collate&quot;:null},&quot;right&quot;:{&quot;type&quot;:&quot;number&quot;,&quot;value&quot;:100000}},&quot;groupby&quot;:null,&quot;having&quot;:null,&quot;orderby&quot;:null,&quot;limit&quot;:{&quot;seperator&quot;:&quot;&quot;,&quot;value&quot;:[]},&quot;window&quot;:null}}"]
+    node_2["WHERE u.id IN expr"]
     node_3["SELECT u.id, u.name"]
     node_0 --> node_1
     node_1 --> node_2

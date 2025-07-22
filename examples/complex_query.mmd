@@ -2,7 +2,7 @@ flowchart LR
     node_0[products]
     node_1[FROM products]
     node_2["WHERE status = &#39;active&#39; AND price &gt; 10"]
-    node_3[GROUP BY]
+    node_3["GROUP BY category"]
     node_4["HAVING COUNT(*) &gt; 5"]
     node_5["SELECT category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price"]
     node_6["ORDER BY total_products DESC, avg_price ASC"]

@@ -16,7 +16,7 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: u
-    node_2 [label="WHERE u.id IN {\"tableList\":[\"select::null::orders\"],\"columnList\":[\"select::users::id\",\"select::users::name\",\"select::orders::user_id\",\"select::orders::total_amount\"],\"ast\":{\"with\":null,\"type\":\"select\",\"options\":null,\"distinct\":{\"type\":null},\"columns\":[{\"type\":\"expr\",\"expr\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"user_id\"}},\"collate\":null},\"as\":null}],\"into\":{\"position\":null},\"from\":[{\"db\":null,\"table\":\"orders\",\"as\":\"o\"}],\"where\":{\"type\":\"binary_expr\",\"operator\":\">\",\"left\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"total_amount\"}},\"collate\":null},\"right\":{\"type\":\"number\",\"value\":100000}},\"groupby\":null,\"having\":null,\"orderby\":null,\"limit\":{\"seperator\":\"\",\"value\":[]},\"window\":null}}", fillcolor=lightyellow, style="filled,rounded"];
+    node_2 [label="WHERE u.id IN expr", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
