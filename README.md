@@ -4,7 +4,7 @@ A library and CLI tool for SQL visualization. Parse SQL strings and visualize da
 
 ## Features
 
-- 🎯 Two perspectives: operation-focused and schema-focused
+- 🎯 Comprehensive schema view with column-level data flow
 - 📦 Available as both library and CLI
 - 🌐 Works in both browser and Node.js
 - 📸 Schema snapshot generation to track transformations
@@ -46,15 +46,14 @@ cat query.sql | sqloflow -f mermaid
 -o, --output <file>       Output to file instead of stdout
 -d, --dialect <dialect>   SQL dialect: postgresql, mysql, sqlite, mariadb, transactsql
                          (default: postgresql)
--v, --view <view>         View type for json/dot: operation, schema (default: operation)
 -h, --help               Show help message
 ```
 
 ### Examples
 
 ```bash
-# Output JSON schema view with MySQL syntax
-sqloflow -d mysql -f json -v schema "SELECT u.id, u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id"
+# Output JSON with MySQL syntax
+sqloflow -d mysql -f json "SELECT u.id, u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id"
 
 # Generate DOT file and convert to PNG
 sqloflow -f dot "SELECT * FROM users" > query.dot
@@ -95,16 +94,12 @@ const ir = convert(ast);
 const mermaid = render(ir, { format: 'mermaid' });
 console.log(mermaid);
 
-// Render as JSON (operation-focused)
-const jsonOp = render(ir, { format: 'json', jsonViewType: 'operation' });
-console.log(jsonOp);
-
-// Render as JSON (schema-focused)
-const jsonSchema = render(ir, { format: 'json', jsonViewType: 'schema' });
-console.log(jsonSchema);
+// Render as JSON
+const json = render(ir, { format: 'json' });
+console.log(json);
 
 // Render as DOT format
-const dot = render(ir, { format: 'dot', jsonViewType: 'operation' });
+const dot = render(ir, { format: 'dot' });
 console.log(dot);
 
 // Render as ASCII art
@@ -146,13 +141,10 @@ Converts AST to Intermediate Representation (IR) graph structure.
 Renders graph in specified format.
 
 - `options.format`: Output format
-  - `'json'`
-  - `'mermaid'`
-  - `'dot'`
-  - `'ascii'`
-- `options.jsonViewType`: View type (for JSON and DOT formats)
-  - `'operation'`: Operation-focused view
-  - `'schema'`: Schema-focused view
+  - `'json'`: Complete graph structure as JSON
+  - `'mermaid'`: Mermaid flowchart diagram
+  - `'dot'`: GraphViz DOT format with enhanced schema view
+  - `'ascii'`: ASCII art diagram
 
 ## Output Examples
 
@@ -177,49 +169,42 @@ flowchart LR
 └────────┘    └────────┘    └────────┘    └────────┘
 ```
 
-### DOT (Graphviz)
+### DOT (Graphviz) - Enhanced Schema View
 
 ```dot
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  node_0 [label="users", fillcolor=lightblue, style="filled,rounded"];
-  node_1 [label="FROM", fillcolor=lightgreen, style="filled,rounded"];
-  node_2 [label="WHERE", fillcolor=lightyellow, style="filled,rounded"];
-  node_3 [label="SELECT", fillcolor=lightgreen, style="filled,rounded"];
+  node_0 [label="FROM users|id\nname\nemail", style=filled, fillcolor=lightgreen];
+  node_1 [label="WHERE|active = true", style=filled, fillcolor=lightyellow];
+  node_2 [label="SELECT|id\nname", style=filled, fillcolor=lightyellow];
 
-  node_0 -> node_1 [color=black];
-  node_1 -> node_2 [color=black];
-  node_2 -> node_3 [color=black];
+  node_0 -> node_1;
+  node_1 -> node_2;
 }
 ```
 
-### JSON (Operation-focused)
+### JSON
 
 ```json
 {
-  "view": "operation",
   "nodes": [
     {
       "id": "node_0",
-      "type": "relation",
-      "label": "users"
-    },
-    {
-      "id": "node_1",
-      "type": "op",
+      "kind": "op",
       "label": "FROM",
       "sql": "FROM users"
     },
     {
-      "id": "node_2",
-      "type": "clause",
-      "label": "WHERE"
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "active = true"
     },
     {
-      "id": "node_3",
-      "type": "op",
+      "id": "node_2",
+      "kind": "op",
       "label": "SELECT",
       "sql": "id, name"
     }
@@ -227,21 +212,31 @@ digraph sqloflow {
   "edges": [
     {
       "id": "edge_0",
-      "type": "flow",
-      "from": "node_0",
-      "to": "node_1"
+      "kind": "flow",
+      "from": {"node": "node_0"},
+      "to": {"node": "node_1"}
     },
     {
       "id": "edge_1",
-      "type": "flow",
-      "from": "node_1",
-      "to": "node_2"
-    },
+      "kind": "flow",
+      "from": {"node": "node_1"},
+      "to": {"node": "node_2"}
+    }
+  ],
+  "snapshots": [
     {
-      "id": "edge_2",
-      "type": "flow",
-      "from": "node_2",
-      "to": "node_3"
+      "stepId": "node_0",
+      "relations": {
+        "users": {
+          "name": "users",
+          "columns": [
+            {"id": "c1", "name": "id", "type": "INT"},
+            {"id": "c2", "name": "name", "type": "VARCHAR"},
+            {"id": "c3", "name": "email", "type": "VARCHAR"},
+            {"id": "c4", "name": "active", "type": "BOOLEAN"}
+          ]
+        }
+      }
     }
   ]
 }

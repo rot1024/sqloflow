@@ -1,0 +1,35 @@
+digraph schema_flow {
+  rankdir=LR;
+  node [shape=record];
+
+  // Source tables
+  node_0 [label="FROM orders|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
+  node_5 [label="FROM orders AS o|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
+
+  // Operations
+
+  subgraph cluster_node_4 {
+    label="CTE: recent_max";
+    style=filled;
+    color=lightblue;
+    node [style=filled,color=white];
+    node_3 [label="SELECT|customer_id\nMAX(total_amount) AS max_total", style=filled, fillcolor=lightyellow];
+    node_2 [label="GROUP BY|customer_id", style=filled, fillcolor=lightyellow];
+    node_1 [label="WHERE|created_at \>= CURRENT_DATE() - INTERVAL '30 days'", style=filled, fillcolor=lightyellow];
+    node_0 [label="FROM orders|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
+    node_0 -> node_1;
+    node_1 -> node_2;
+    node_2 -> node_3;
+  }
+  node_7 [label="WHERE|o.total_amount = r.max_total", style=filled, fillcolor=lightyellow];
+  node_8 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_6 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id", style=filled, fillcolor=lightyellow];
+  node_5 -> node_6;
+  node_3 -> node_6;
+  node_6 -> node_7;
+  node_7 -> node_8;
+}

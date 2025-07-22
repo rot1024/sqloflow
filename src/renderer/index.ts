@@ -9,13 +9,13 @@ import { renderDot } from './dot.js';
 export const render = (graph: Graph, options: RenderOptions): string => {
   switch (options.format) {
     case 'json':
-      return renderJson(graph, options.jsonViewType);
+      return renderJson(graph);
     case 'mermaid':
       return renderMermaid(graph);
     case 'ascii':
       return renderAscii(graph);
     case 'dot':
-      return renderDot(graph, options.jsonViewType);
+      return renderDot(graph);
     default:
       throw new RenderError(`Unsupported render format: ${options.format}`, options.format);
   }

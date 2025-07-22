@@ -30,5 +30,5 @@ digraph schema_flow {
     subq_0_node_0 -> subq_0_node_1;
     subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [label="value list"];
+  subq_0_node_2 -> node_1 [label="set of values"];
 }

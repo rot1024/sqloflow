@@ -1,41 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from '../parser.js';
 import { convert } from '../converter/index.js';
-import { renderJson, type JsonOutput } from './json.js';
+import { renderJson } from './json.js';
+import type { Graph } from '../types/ir.js';
 
 describe('JSON renderer', () => {
-  it('should render operation view', () => {
+  it('should output the graph as JSON', () => {
     const sql = 'SELECT id, name FROM users WHERE country = \'JP\'';
     const ast = parse(sql);
     const ir = convert(ast);
     
-    const result = renderJson(ir, 'operation');
-    const json = JSON.parse(result);
+    const result = renderJson(ir);
+    const json: Graph = JSON.parse(result);
     
-    expect(json.view).toBe('operation');
     expect(json.nodes).toBeDefined();
     expect(json.edges).toBeDefined();
-    
-    // Operation view includes op/clause nodes
-    const nodeTypes = (json as JsonOutput).nodes.map(n => n.type);
-    expect(nodeTypes).toContain('op');
-    expect(nodeTypes).toContain('clause');
+    expect(json.nodes.length).toBeGreaterThan(0);
+    expect(json.edges.length).toBeGreaterThan(0);
   });
 
-  it('should render schema view', () => {
-    const sql = 'SELECT id, name FROM users';
-    const ast = parse(sql);
-    const ir = convert(ast);
-    
-    const result = renderJson(ir, 'schema');
-    const json = JSON.parse(result);
-    
-    expect(json.view).toBe('schema');
-    expect(json.nodes).toBeDefined();
-    expect(json.edges).toBeDefined();
-  });
-
-  it('should filter nodes by view type', () => {
+  it('should include all node types', () => {
     const sql = `
       CREATE TABLE users (id INT, name VARCHAR(100));
       SELECT id, name FROM users;
@@ -43,23 +27,12 @@ describe('JSON renderer', () => {
     const ast = parse(sql);
     const ir = convert(ast);
     
-    const operationResult = renderJson(ir, 'operation');
-    const schemaResult = renderJson(ir, 'schema');
+    const result = renderJson(ir);
+    const json: Graph = JSON.parse(result);
     
-    const operationJson = JSON.parse(operationResult);
-    const schemaJson = JSON.parse(schemaResult);
-    
-    // Operation view should have op nodes
-    const operationNodeTypes = (operationJson as JsonOutput).nodes.map(n => n.type);
-    expect(operationNodeTypes).toContain('op');
-    
-    // Schema view should have column nodes (relation nodes are now integrated into FROM/JOIN nodes)
-    const schemaNodeTypes = (schemaJson as JsonOutput).nodes.map(n => n.type);
-    expect(schemaNodeTypes).toContain('column');
-    
-    // Schema view with column nodes should not have op/clause in filtered result
-    const schemaOpNodes = (schemaJson as JsonOutput).nodes.filter(n => n.type === 'op' || n.type === 'clause');
-    expect(schemaOpNodes.length).toBe(0);
+    // Should include various node types
+    const nodeTypes = new Set(json.nodes.map(n => n.kind));
+    expect(nodeTypes.size).toBeGreaterThan(1);
   });
 
   it('should include snapshots when available', () => {
@@ -76,10 +49,24 @@ describe('JSON renderer', () => {
     expect(ir.snapshots!.length).toBeGreaterThan(0);
     
     const result = renderJson(ir);
-    const json = JSON.parse(result);
+    const json: Graph = JSON.parse(result);
     
-    // JSON renderer includes snapshots when they exist
+    // JSON output includes snapshots when they exist
     expect(json.snapshots).toBeDefined();
-    expect(json.snapshots.length).toBe(ir.snapshots!.length);
+    expect(json.snapshots!.length).toBe(ir.snapshots!.length);
+  });
+
+  it('should be valid JSON with proper formatting', () => {
+    const sql = 'SELECT * FROM users';
+    const ast = parse(sql);
+    const ir = convert(ast);
+    
+    const result = renderJson(ir);
+    
+    // Should be properly formatted with 2-space indentation
+    expect(result).toContain('\n  ');
+    
+    // Should be valid JSON
+    expect(() => JSON.parse(result)).not.toThrow();
   });
 });

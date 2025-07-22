@@ -45,21 +45,10 @@ describe('CLI', () => {
     
     expect(result.status).toBe(0);
     const json = JSON.parse(result.stdout);
-    expect(json.view).toBe('operation');
     expect(json.nodes).toBeDefined();
     expect(json.edges).toBeDefined();
   });
 
-  it('should respect JSON view type with -v schema', () => {
-    const sql = 'SELECT id, name FROM users';
-    const result = spawnSync('npx', ['tsx', cliPath, '-f', 'json', '-v', 'schema', sql], {
-      encoding: 'utf8'
-    });
-    
-    expect(result.status).toBe(0);
-    const json = JSON.parse(result.stdout);
-    expect(json.view).toBe('schema');
-  });
 
   it('should read from stdin', () => {
     const sql = 'SELECT * FROM products WHERE price > 100';

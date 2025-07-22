@@ -2,14 +2,13 @@
 
 import { readFileSync, writeFileSync } from 'fs';
 import { parse, convert, render } from './index.js';
-import type { RenderOptions, JsonViewType, Dialect } from './index.js';
+import type { RenderOptions, Dialect } from './index.js';
 import { ParseError, ConversionError, RenderError } from './errors.js';
 
 interface CliOptions {
   format: 'json' | 'mermaid' | 'ascii' | 'dot';
   output?: string;
   dialect: Dialect;
-  jsonView: JsonViewType;
   help: boolean;
 }
 
@@ -26,7 +25,6 @@ Options:
   -o, --output <file>       Output to file instead of stdout
   -d, --dialect <dialect>   SQL dialect: postgresql, mysql, sqlite, mariadb, transactsql
                            (default: postgresql)
-  -v, --view <view>         View type for json/dot: operation, schema (default: operation)
   -h, --help               Show this help message
 
 Examples:
@@ -48,7 +46,6 @@ const parseArgs = (args: string[]): { options: CliOptions; sql?: string } => {
   const options: CliOptions = {
     format: 'mermaid',
     dialect: 'postgresql',
-    jsonView: 'operation',
     help: false
   };
   
@@ -79,15 +76,6 @@ const parseArgs = (args: string[]): { options: CliOptions; sql?: string } => {
           throw new Error(`Invalid dialect: ${dialect}`);
         }
         options.dialect = dialect;
-        break;
-        
-      case '-v':
-      case '--view':
-        const view = args[++i] as JsonViewType;
-        if (view !== 'operation' && view !== 'schema') {
-          throw new Error(`Invalid view: ${view}. Must be 'operation' or 'schema'`);
-        }
-        options.jsonView = view;
         break;
         
       case '-h':
@@ -149,8 +137,7 @@ const main = async () => {
     const ir = convert(ast);
     
     const renderOptions: RenderOptions = {
-      format: options.format,
-      jsonViewType: options.jsonView
+      format: options.format
     };
     
     const result = render(ir, renderOptions);

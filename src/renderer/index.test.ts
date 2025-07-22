@@ -11,14 +11,12 @@ describe('render', () => {
     const ir = convert(ast);
     
     const options: RenderOptions = {
-      format: 'json',
-      jsonViewType: 'operation'
+      format: 'json'
     };
     
     const result = render(ir, options);
     const json = JSON.parse(result);
     
-    expect(json.view).toBe('operation');
     expect(json.nodes).toBeDefined();
     expect(json.edges).toBeDefined();
   });

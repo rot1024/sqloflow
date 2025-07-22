@@ -40,21 +40,13 @@ async function generateVisualizations() {
         const ast = parse(sql);
         const graph = convert(ast);
         
-        // Generate DOT format - operation view
-        console.log('  Generating DOT operation view...');
-        const dotOperation = render(graph, { format: 'dot', jsonViewType: 'operation' });
-        await writeFile(join(__dirname, `${baseName}_operation.dot`), dotOperation);
+        // Generate DOT format
+        console.log('  Generating DOT format...');
+        const dot = render(graph, { format: 'dot' });
+        await writeFile(join(__dirname, `${baseName}.dot`), dot);
         
         // Generate PNG from DOT
-        await execAsync(`dot -Tpng "${join(__dirname, `${baseName}_operation.dot`)}" -o "${join(__dirname, `${baseName}_operation.png`)}"`);
-        
-        // Generate DOT format - schema view
-        console.log('  Generating DOT schema view...');
-        const dotSchema = render(graph, { format: 'dot', jsonViewType: 'schema' });
-        await writeFile(join(__dirname, `${baseName}_schema.dot`), dotSchema);
-        
-        // Generate PNG from DOT
-        await execAsync(`dot -Tpng "${join(__dirname, `${baseName}_schema.dot`)}" -o "${join(__dirname, `${baseName}_schema.png`)}"`);
+        await execAsync(`dot -Tpng "${join(__dirname, `${baseName}.dot`)}" -o "${join(__dirname, `${baseName}.png`)}"`);
         
         // Generate Mermaid format
         console.log('  Generating Mermaid diagram...');
