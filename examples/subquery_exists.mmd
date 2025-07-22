@@ -3,13 +3,13 @@ flowchart LR
     node_1["WHERE EXISTS(...)"]
     subgraph subquery_node_2 ["Subquery (exists) - correlated"]
         direction TB
-        subq_2_node_0[FROM orders AS o]
-        subq_2_node_1["WHERE o.customer_id = c.customer_id AND o.status = &#39;pending&#39;"]
-        subq_2_node_2["SELECT 1"]
-        subq_2_node_0 --> subq_2_node_1
-        subq_2_node_1 --> subq_2_node_2
+        subq_0_node_0[FROM orders AS o]
+        subq_0_node_1["WHERE o.customer_id = c.customer_id AND o.status = &#39;pending&#39;"]
+        subq_0_node_2["SELECT 1"]
+        subq_0_node_0 --> subq_0_node_1
+        subq_0_node_1 --> subq_0_node_2
     end
-    subq_2_node_2 -->|boolean| node_1
+    subq_0_node_2 -->|boolean| node_1
     node_3["SELECT c.customer_id, c.name"]
     node_0 --> node_1
     node_1 --> node_3

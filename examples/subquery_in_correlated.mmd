@@ -3,13 +3,13 @@ flowchart LR
     node_1["WHERE p.category_id IN expr"]
     subgraph subquery_node_2 ["Subquery (in) - correlated"]
         direction TB
-        subq_2_node_0[FROM categories AS c]
-        subq_2_node_1["WHERE c.status = &#39;active&#39; AND c.created_date &gt; p.launch_date"]
-        subq_2_node_2["SELECT c.category_id"]
-        subq_2_node_0 --> subq_2_node_1
-        subq_2_node_1 --> subq_2_node_2
+        subq_0_node_0[FROM categories AS c]
+        subq_0_node_1["WHERE c.status = &#39;active&#39; AND c.created_date &gt; p.launch_date"]
+        subq_0_node_2["SELECT c.category_id"]
+        subq_0_node_0 --> subq_0_node_1
+        subq_0_node_1 --> subq_0_node_2
     end
-    subq_2_node_2 -->|set of values| node_1
+    subq_0_node_2 -->|set of values| node_1
     node_3["SELECT p.product_id, p.name"]
     node_0 --> node_1
     node_1 --> node_3

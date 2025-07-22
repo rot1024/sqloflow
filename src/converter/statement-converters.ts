@@ -18,6 +18,7 @@ import type {
   TableExpr,
   Dual
 } from 'node-sql-parser';
+import type { TableRef } from '../types/sql-parser.js';
 import {
   createNode,
   createEdge,
@@ -68,7 +69,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   let lastNodeId: string | null = null;
-  let parentTableRefs: any[] = [];
+  let parentTableRefs: From[] = [];
 
   // WITH clause (CTEs)
   if (stmt.with) {

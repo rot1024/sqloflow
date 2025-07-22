@@ -1,0 +1,24 @@
+flowchart LR
+    node_0[FROM orders]
+    node_1["WHERE amount &gt; expr"]
+    subgraph subquery_node_2 ["Subquery (scalar)"]
+        direction TB
+        subq_0_node_0[FROM orders]
+        subq_0_node_1["WHERE customer_id IN expr"]
+        subgraph subquery_subq_0_node_2 ["Subquery (in)"]
+            direction TB
+            subq_1_node_0[FROM customers]
+            subq_1_node_1["WHERE country = &#39;JP&#39;"]
+            subq_1_node_2["SELECT id"]
+            subq_1_node_0 --> subq_1_node_1
+            subq_1_node_1 --> subq_1_node_2
+        end
+        subq_1_node_2 -->|set of values| subq_0_node_1
+        subq_0_node_3["SELECT AVG(amount)"]
+        subq_0_node_0 --> subq_0_node_1
+        subq_0_node_1 --> subq_0_node_3
+    end
+    subq_0_node_3 -->|1 row, 1 col| node_1
+    node_3["SELECT *"]
+    node_0 --> node_1
+    node_1 --> node_3

@@ -32,13 +32,13 @@ digraph sqloflow {
     fillcolor=lavender;
     color=purple;
     penwidth=2;
-    subq_2_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-    subq_2_node_1 [label="WHERE customer_id = o.customer_id", fillcolor=lightyellow, style="filled,rounded"];
-    subq_2_node_2 [label="SELECT MAX(total_amount)", fillcolor=lightgreen, style="filled,rounded"];
-    subq_2_node_0 -> subq_2_node_1 [color=black];
-    subq_2_node_1 -> subq_2_node_2 [color=black];
+    subq_0_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
+    subq_0_node_1 [label="WHERE customer_id = o.customer_id", fillcolor=lightyellow, style="filled,rounded"];
+    subq_0_node_2 [label="SELECT MAX(total_amount)", fillcolor=lightgreen, style="filled,rounded"];
+    subq_0_node_0 -> subq_0_node_1 [color=black];
+    subq_0_node_1 -> subq_0_node_2 [color=black];
   }
-  subq_2_node_2 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
+  subq_0_node_2 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
 
   // Schema transformation edges
   node_0 -> node_1 [color=black, label="schema change"];

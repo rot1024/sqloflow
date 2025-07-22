@@ -14,13 +14,13 @@ digraph sqloflow {
     fillcolor=lavender;
     color=purple;
     penwidth=2;
-    subq_2_node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
-    subq_2_node_1 [label="WHERE o.customer_id = c.customer_id AND o.status = 'pending'", fillcolor=lightyellow, style="filled,rounded"];
-    subq_2_node_2 [label="SELECT 1", fillcolor=lightgreen, style="filled,rounded"];
-    subq_2_node_0 -> subq_2_node_1 [color=black];
-    subq_2_node_1 -> subq_2_node_2 [color=black];
+    subq_0_node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+    subq_0_node_1 [label="WHERE o.customer_id = c.customer_id AND o.status = 'pending'", fillcolor=lightyellow, style="filled,rounded"];
+    subq_0_node_2 [label="SELECT 1", fillcolor=lightgreen, style="filled,rounded"];
+    subq_0_node_0 -> subq_0_node_1 [color=black];
+    subq_0_node_1 -> subq_0_node_2 [color=black];
   }
-  subq_2_node_2 -> node_1 [color=purple, style=bold, label="boolean"];
+  subq_0_node_2 -> node_1 [color=purple, style=bold, label="boolean"];
 
   // Edges
   node_0 -> node_1 [color=black];

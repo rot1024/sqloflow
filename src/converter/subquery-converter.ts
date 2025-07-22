@@ -1,6 +1,6 @@
 import type { Node, Edge, SubqueryNode } from '../types/ir.js';
 import type { ConversionContext } from './types.js';
-import type { Select } from 'node-sql-parser';
+import type { Select, From } from 'node-sql-parser';
 import { convertSelectStatement } from './statement-converters.js';
 
 /**
@@ -10,10 +10,10 @@ export const convertSubquery = (
   ctx: ConversionContext,
   subquery: Select,
   subqueryType: 'scalar' | 'in' | 'exists',
-  parentTableRefs?: any[]
+  parentTableRefs?: From[]
 ): SubqueryNode => {
   // Create subquery context with separate counters
-  const subqueryPrefix = `subq_${ctx.nodeCounter}`;
+  const subqueryPrefix = `subq_${ctx.subqueryCounter++}`;  // Use global subquery counter
   const subCtx: ConversionContext = {
     ...ctx,
     nodeCounter: 0,  // Reset counter for subquery nodes
@@ -62,7 +62,7 @@ export const convertSubquery = (
  * Detect correlated fields in a subquery
  * Finds column references that refer to tables from the parent query
  */
-const detectCorrelatedFields = (subquery: Select, parentTableRefs?: any[]): string[] | undefined => {
+const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): string[] | undefined => {
   if (!parentTableRefs || parentTableRefs.length === 0) return undefined;
   
   const correlatedFields: Set<string> = new Set();

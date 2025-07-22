@@ -275,13 +275,27 @@ const renderSubquerySubgraph = (subqueryNode: SubqueryNode, lines: string[], par
   
   // Render inner nodes
   subqueryNode.innerGraph.nodes.forEach(node => {
-    const style = getNodeStyle(node.kind);
-    const label = formatNodeLabel(node);
-    lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
+    if (node.kind === 'subquery' && subqueryNode.innerGraph) {
+      // Recursively render nested subqueries
+      const nestedLines: string[] = [];
+      renderSubquerySubgraph(node as SubqueryNode, nestedLines, subqueryNode.innerGraph);
+      // Indent the nested subgraph
+      lines.push(...nestedLines.map(line => '  ' + line));
+    } else {
+      const style = getNodeStyle(node.kind);
+      const label = formatNodeLabel(node);
+      lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
+    }
   });
   
-  // Render inner edges
+  // Render inner edges (excluding those from nested subqueries)
   subqueryNode.innerGraph.edges.forEach(edge => {
+    // Skip edges from nested subquery nodes (they're handled in the nested subgraph)
+    const fromNode = subqueryNode.innerGraph?.nodes.find(n => n.id === edge.from.node);
+    if (fromNode?.kind === 'subquery' && edge.kind === 'subqueryResult') {
+      return;
+    }
+    
     const style = getEdgeStyle(edge.kind);
     const attrs = style ? ` [${style}]` : '';
     lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)}${attrs};`);

@@ -3,13 +3,13 @@ flowchart LR
     node_1["WHERE u.id IN expr"]
     subgraph subquery_node_2 ["Subquery (in)"]
         direction TB
-        subq_2_node_0[FROM orders AS o]
-        subq_2_node_1["WHERE o.total_amount &gt; 100000"]
-        subq_2_node_2["SELECT o.user_id"]
-        subq_2_node_0 --> subq_2_node_1
-        subq_2_node_1 --> subq_2_node_2
+        subq_0_node_0[FROM orders AS o]
+        subq_0_node_1["WHERE o.total_amount &gt; 100000"]
+        subq_0_node_2["SELECT o.user_id"]
+        subq_0_node_0 --> subq_0_node_1
+        subq_0_node_1 --> subq_0_node_2
     end
-    subq_2_node_2 -->|set of values| node_1
+    subq_0_node_2 -->|set of values| node_1
     node_3["SELECT u.id, u.name"]
     node_0 --> node_1
     node_1 --> node_3

@@ -20,6 +20,7 @@ export const createContext = (schema: SchemaInfo): ConversionContext => {
   return {
     nodeCounter: 0,
     edgeCounter: 0,
+    subqueryCounter: 0,
     schema,
     currentSchema,
     snapshots: []

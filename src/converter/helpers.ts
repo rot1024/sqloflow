@@ -16,6 +16,7 @@ import type {
   Select,
   Dual
 } from 'node-sql-parser';
+import type { Expression, TableRef } from '../types/sql-parser.js';
 
 export const createNode = (ctx: ConversionContext, kind: NodeKind, label: string, sql?: string): Node => {
   const node: Node = {
@@ -94,7 +95,7 @@ export const expressionToSQL = (expr: any): string => {
         funcName = expr.name;
       } else if (expr.name?.name && Array.isArray(expr.name.name)) {
         // Handle nested name structure like CURRENT_DATE
-        funcName = expr.name.name.map((n: any) => n.value || n).join('_');
+        funcName = expr.name.name.map((n: { value?: string }) => n.value || n).join('_');
       } else if (expr.name?.value) {
         funcName = expr.name.value;
       } else {
@@ -107,7 +108,7 @@ export const expressionToSQL = (expr: any): string => {
         if (funcName === 'EXISTS' && expr.args.type === 'expr_list' && expr.args.value?.[0]?.ast) {
           args = '...';
         } else if (Array.isArray(expr.args)) {
-          args = expr.args.map((a: any) => expressionToSQL(a)).join(', ');
+          args = expr.args.map((a: Expression) => expressionToSQL(a)).join(', ');
         } else if (expr.args.expr) {
           // Handle args wrapped in expr property (common for aggr_func)
           args = expressionToSQL(expr.args.expr);
@@ -118,13 +119,13 @@ export const expressionToSQL = (expr: any): string => {
       return `${funcName}(${args})`;
 
     case 'expr_list':
-      return expr.value.map((e: any) => expressionToSQL(e)).join(', ');
+      return expr.value.map((e: Expression) => expressionToSQL(e)).join(', ');
 
     case 'case':
       let caseStr = 'CASE';
       if (expr.expr) caseStr += ` ${expressionToSQL(expr.expr)}`;
       if (expr.when) {
-        expr.when.forEach((w: any) => {
+        expr.when.forEach((w: { when: Expression; then: Expression }) => {
           caseStr += ` WHEN ${expressionToSQL(w.when)} THEN ${expressionToSQL(w.then)}`;
         });
       }
@@ -135,7 +136,7 @@ export const expressionToSQL = (expr: any): string => {
     case 'in':
     case 'not_in':
       const inExpr = expressionToSQL(expr.left);
-      const inList = expr.right.map((r: any) => expressionToSQL(r)).join(', ');
+      const inList = expr.right.map((r: Expression) => expressionToSQL(r)).join(', ');
       return `${inExpr} ${expr.type === 'not_in' ? 'NOT IN' : 'IN'} (${inList})`;
 
     case 'between':

@@ -230,11 +230,23 @@ const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph): string[
   
   // Render inner nodes
   for (const node of subqueryNode.innerGraph.nodes) {
-    lines.push(`        ${formatNode(node)}`);
+    if (node.kind === 'subquery' && subqueryNode.innerGraph) {
+      // Recursively render nested subqueries
+      const nestedLines = renderSubquery(node as SubqueryNode, subqueryNode.innerGraph);
+      // Add extra indentation for nested subgraph
+      lines.push(...nestedLines.map(line => '    ' + line));
+    } else {
+      lines.push(`        ${formatNode(node)}`);
+    }
   }
   
-  // Render inner edges
+  // Render inner edges (excluding those from nested subqueries)
   for (const edge of subqueryNode.innerGraph.edges) {
+    // Skip edges from nested subquery nodes (they're handled in the nested subgraph)
+    const fromNode = subqueryNode.innerGraph?.nodes.find(n => n.id === edge.from.node);
+    if (fromNode?.kind === 'subquery' && edge.kind === 'subqueryResult') {
+      continue;
+    }
     lines.push(`        ${formatEdge(edge, subqueryNode.innerGraph)}`);
   }
   
