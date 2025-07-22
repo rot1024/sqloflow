@@ -63,10 +63,25 @@ export const expressionToSQL = (expr: any): string => {
       
     case 'function':
     case 'aggr_func':
-      const funcName = expr.name.toUpperCase();
+      // Handle function names that can be string or object with nested structure
+      let funcName: string;
+      if (typeof expr.name === 'string') {
+        funcName = expr.name;
+      } else if (expr.name?.name && Array.isArray(expr.name.name)) {
+        // Handle nested name structure like CURRENT_DATE
+        funcName = expr.name.name.map((n: any) => n.value || n).join('_');
+      } else if (expr.name?.value) {
+        funcName = expr.name.value;
+      } else {
+        funcName = 'UNKNOWN';
+      }
+      
       let args = '';
       if (expr.args) {
-        if (Array.isArray(expr.args)) {
+        // Special handling for EXISTS function
+        if (funcName === 'EXISTS' && expr.args.type === 'expr_list' && expr.args.value?.[0]?.ast) {
+          args = 'subquery';
+        } else if (Array.isArray(expr.args)) {
           args = expr.args.map((a: any) => expressionToSQL(a)).join(', ');
         } else if (expr.args.expr && expr.args.expr.type === 'star') {
           args = '*';
@@ -118,6 +133,28 @@ export const expressionToSQL = (expr: any): string => {
       
     case 'unary_expr':
       return `${expr.operator}${expressionToSQL(expr.expr)}`;
+      
+    case 'interval':
+      // Handle INTERVAL expressions from node-sql-parser
+      // Format 1: INTERVAL '30 days' -> expr.value contains full string, unit is empty
+      // Format 2: INTERVAL '30' DAY -> expr.value contains number, unit contains unit
+      if (expr.expr && expr.expr.value !== undefined) {
+        const value = expr.expr.value;
+        const unit = expr.unit || '';
+        return unit ? `INTERVAL '${value}' ${unit.toUpperCase()}` : `INTERVAL '${value}'`;
+      }
+      // Fallback for unexpected format
+      return `INTERVAL '${expr.value || ''}'`;
+      
+    case 'identifier':
+      return expr.value;
+      
+    case 'select':
+      // For subqueries, return a placeholder
+      return '(subquery)';
+      
+    case 'exists':
+      return 'EXISTS (subquery)';
       
     default:
       // Fallback for unknown expression types

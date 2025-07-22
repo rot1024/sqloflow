@@ -1,0 +1,15 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Node definitions
+  node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
+  node_1 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="SELECT u.id, u.name", fillcolor=lightgreen, style="filled,rounded"];
+  node_2 [label="WHERE u.id IN {\"tableList\":[\"select::null::orders\"],\"columnList\":[\"select::users::id\",\"select::users::name\",\"select::orders::user_id\",\"select::orders::total_amount\"],\"ast\":{\"with\":null,\"type\":\"select\",\"options\":null,\"distinct\":{\"type\":null},\"columns\":[{\"type\":\"expr\",\"expr\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"user_id\"}},\"collate\":null},\"as\":null}],\"into\":{\"position\":null},\"from\":[{\"db\":null,\"table\":\"orders\",\"as\":\"o\"}],\"where\":{\"type\":\"binary_expr\",\"operator\":\">\",\"left\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"total_amount\"}},\"collate\":null},\"right\":{\"type\":\"number\",\"value\":100000}},\"groupby\":null,\"having\":null,\"orderby\":null,\"limit\":{\"seperator\":\"\",\"value\":[]},\"window\":null}}", fillcolor=lightyellow, style="filled,rounded"];
+
+  // Edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black];
+  node_2 -> node_3 [color=black];
+}

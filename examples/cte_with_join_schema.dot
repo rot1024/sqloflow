@@ -1,0 +1,78 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Schema view with snapshots
+  node_0 [label="orders", fillcolor=lightblue, style="filled,rounded"];
+  node_5 [label="CTE: recent_max", fillcolor=lightblue, style="filled,rounded"];
+  node_6 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
+  node_8 [label="recent_max AS r", fillcolor=lightblue, style="filled,rounded"];
+  subgraph cluster_0 {
+    label="Schema Snapshot 1";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: orders
+    node_1 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_1 {
+    label="Schema Snapshot 2";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: orders
+    node_2 [label="WHERE created_at >= CURRENT_DATE() - INTERVAL '30 days'", fillcolor=lightyellow, style="filled,rounded"];
+  }
+  subgraph cluster_2 {
+    label="Schema Snapshot 3";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _grouped
+    node_3 [label="GROUP BY", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_3 {
+    label="Schema Snapshot 4";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result
+    node_4 [label="SELECT customer_id, MAX(total_amount) AS max_total", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_4 {
+    label="Schema Snapshot 5";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result, o
+    node_7 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_5 {
+    label="Schema Snapshot 6";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result, o, r
+    node_9 [label="INNER JOIN INNER JOIN recent_max AS r ON r.customer_id = o.customer_id", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_6 {
+    label="Schema Snapshot 7";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result, o, r
+    node_10 [label="WHERE o.total_amount = r.max_total", fillcolor=lightyellow, style="filled,rounded"];
+  }
+  subgraph cluster_7 {
+    label="Schema Snapshot 8";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result
+    node_11 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
+  }
+
+  // Schema transformation edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black, label="schema change"];
+  node_2 -> node_3 [color=black, label="schema change"];
+  node_3 -> node_4 [color=black, label="schema change"];
+  node_4 -> node_5 [color=green, style=dotted];
+  node_6 -> node_7 [color=black];
+  node_7 -> node_9 [color=black, label="schema change"];
+  node_8 -> node_9 [color=black];
+  node_9 -> node_10 [color=black, label="schema change"];
+  node_10 -> node_11 [color=black, label="schema change"];
+}

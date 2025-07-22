@@ -1,0 +1,30 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Node definitions
+  node_0 [label="orders", fillcolor=lightblue, style="filled,rounded"];
+  node_5 [label="CTE: recent_max", fillcolor=lightblue, style="filled,rounded"];
+  node_6 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
+  node_8 [label="recent_max AS r", fillcolor=lightblue, style="filled,rounded"];
+  node_1 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="GROUP BY", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="SELECT customer_id, MAX(total_amount) AS max_total", fillcolor=lightgreen, style="filled,rounded"];
+  node_7 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+  node_9 [label="INNER JOIN INNER JOIN recent_max AS r ON r.customer_id = o.customer_id", fillcolor=lightgreen, style="filled,rounded"];
+  node_11 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
+  node_2 [label="WHERE created_at >= CURRENT_DATE() - INTERVAL '30 days'", fillcolor=lightyellow, style="filled,rounded"];
+  node_10 [label="WHERE o.total_amount = r.max_total", fillcolor=lightyellow, style="filled,rounded"];
+
+  // Edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black];
+  node_2 -> node_3 [color=black];
+  node_3 -> node_4 [color=black];
+  node_4 -> node_5 [color=green, style=dotted];
+  node_6 -> node_7 [color=black];
+  node_7 -> node_9 [color=black];
+  node_8 -> node_9 [color=black];
+  node_9 -> node_10 [color=black];
+  node_10 -> node_11 [color=black];
+}

@@ -1,0 +1,15 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Node definitions
+  node_0 [label="customers AS c", fillcolor=lightblue, style="filled,rounded"];
+  node_1 [label="FROM customers AS c", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="SELECT c.customer_id, c.name", fillcolor=lightgreen, style="filled,rounded"];
+  node_2 [label="WHERE EXISTS(subquery)", fillcolor=lightyellow, style="filled,rounded"];
+
+  // Edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black];
+  node_2 -> node_3 [color=black];
+}

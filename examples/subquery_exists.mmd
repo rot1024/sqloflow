@@ -1,0 +1,8 @@
+flowchart LR
+    node_0[customers AS c]
+    node_1[FROM customers AS c]
+    node_2["WHERE EXISTS(subquery)"]
+    node_3["SELECT c.customer_id, c.name"]
+    node_0 --> node_1
+    node_1 --> node_2
+    node_2 --> node_3

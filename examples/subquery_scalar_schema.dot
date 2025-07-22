@@ -1,0 +1,33 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Schema view with snapshots
+  node_0 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
+  subgraph cluster_0 {
+    label="Schema Snapshot 1";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: o
+    node_1 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_1 {
+    label="Schema Snapshot 2";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: o
+    node_2 [label="WHERE o.total_amount = {\"tableList\":[\"select::null::orders\"],\"columnList\":[\"select::orders::id\",\"select::orders::total_amount\",\"select::null::total_amount\",\"select::null::customer_id\",\"select::orders::customer_id\"],\"ast\":{\"with\":null,\"type\":\"select\",\"options\":null,\"distinct\":{\"type\":null},\"columns\":[{\"type\":\"expr\",\"expr\":{\"type\":\"aggr_func\",\"name\":\"MAX\",\"args\":{\"expr\":{\"type\":\"column_ref\",\"table\":null,\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"total_amount\"}},\"collate\":null}},\"over\":null},\"as\":null}],\"into\":{\"position\":null},\"from\":[{\"db\":null,\"table\":\"orders\",\"as\":null}],\"where\":{\"type\":\"binary_expr\",\"operator\":\"=\",\"left\":{\"type\":\"column_ref\",\"table\":null,\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"customer_id\"}},\"collate\":null},\"right\":{\"type\":\"column_ref\",\"table\":\"o\",\"column\":{\"expr\":{\"type\":\"default\",\"value\":\"customer_id\"}},\"collate\":null}},\"groupby\":null,\"having\":null,\"orderby\":null,\"limit\":{\"seperator\":\"\",\"value\":[]},\"window\":null},\"parentheses\":true}", fillcolor=lightyellow, style="filled,rounded"];
+  }
+  subgraph cluster_2 {
+    label="Schema Snapshot 3";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result
+    node_3 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
+  }
+
+  // Schema transformation edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black, label="schema change"];
+  node_2 -> node_3 [color=black, label="schema change"];
+}
