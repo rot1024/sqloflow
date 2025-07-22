@@ -60,13 +60,70 @@ export const convertSubquery = (
 
 /**
  * Detect correlated fields in a subquery
- * This is a placeholder for Phase 3 implementation
+ * Finds column references that refer to tables from the parent query
  */
 const detectCorrelatedFields = (subquery: Select, parentTableRefs?: any[]): string[] | undefined => {
-  // TODO: Implement in Phase 3
-  // Need to traverse the subquery AST and find column references
-  // that refer to tables from parent query
-  return undefined;
+  if (!parentTableRefs || parentTableRefs.length === 0) return undefined;
+  
+  const correlatedFields: Set<string> = new Set();
+  const parentTables = new Set<string>();
+  
+  // Build set of parent table names/aliases
+  parentTableRefs.forEach(ref => {
+    if (typeof ref === 'object' && 'as' in ref && ref.as) {
+      parentTables.add(ref.as);
+    } else if (typeof ref === 'object' && 'table' in ref && ref.table) {
+      parentTables.add(ref.table);
+    }
+  });
+  
+  // Helper to check if a column reference is correlated
+  const checkColumnRef = (expr: any): void => {
+    if (!expr) return;
+    
+    if (expr.type === 'column_ref' && expr.table) {
+      if (parentTables.has(expr.table)) {
+        // This column references a parent table
+        const columnName = expr.column?.expr?.value || expr.column?.value || 'unknown';
+        correlatedFields.add(`${expr.table}.${columnName}`);
+      }
+    }
+    
+    // Recursively check nested expressions
+    if (expr.type === 'binary_expr') {
+      checkColumnRef(expr.left);
+      checkColumnRef(expr.right);
+    } else if (expr.type === 'expr_list' && Array.isArray(expr.value)) {
+      expr.value.forEach(checkColumnRef);
+    } else if (expr.args) {
+      if (Array.isArray(expr.args)) {
+        expr.args.forEach(checkColumnRef);
+      } else if (expr.args.expr) {
+        checkColumnRef(expr.args.expr);
+      }
+    }
+  };
+  
+  // Check WHERE clause
+  if (subquery.where) {
+    checkColumnRef(subquery.where);
+  }
+  
+  // Check SELECT columns
+  if (subquery.columns && Array.isArray(subquery.columns)) {
+    subquery.columns.forEach(col => {
+      if (col.expr) {
+        checkColumnRef(col.expr);
+      }
+    });
+  }
+  
+  // Check HAVING clause
+  if (subquery.having) {
+    checkColumnRef(subquery.having);
+  }
+  
+  return correlatedFields.size > 0 ? Array.from(correlatedFields) : undefined;
 };
 
 /**

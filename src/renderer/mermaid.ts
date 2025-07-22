@@ -218,7 +218,14 @@ const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph): string[
   
   // Phase 2: Render subquery as subgraph
   const subgraphId = `subquery_${sanitizeId(subqueryNode.id)}`;
-  lines.push(`    subgraph ${subgraphId} ["${escapeLabel(subqueryNode.label)}"]`);
+  
+  // Update label to show correlation information
+  let label = subqueryNode.label;
+  if (subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0) {
+    label += ` - correlated`;
+  }
+  
+  lines.push(`    subgraph ${subgraphId} ["${escapeLabel(label)}"]`);
   lines.push('        direction TB');
   
   // Render inner nodes

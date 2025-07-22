@@ -68,6 +68,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   let lastNodeId: string | null = null;
+  let parentTableRefs: any[] = [];
 
   // WITH clause (CTEs)
   if (stmt.with) {
@@ -82,6 +83,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
   if (stmt.from) {
     // Ensure from is always an array
     const fromArray = Array.isArray(stmt.from) ? stmt.from : [stmt.from];
+    parentTableRefs = fromArray; // Store for subquery correlation detection
     const fromResult = convertFromClause(ctx, fromArray);
     nodes.push(...fromResult.nodes);
     edges.push(...fromResult.edges);
@@ -104,7 +106,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     // Detect and create subquery nodes
     const subqueryInfo = detectSubqueryInExpression(stmt.where);
     if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
-      const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType);
+      const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType, parentTableRefs);
       nodes.push(subqueryNode);
       // Connect subquery to WHERE clause
       edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, whereNode.id));
@@ -153,7 +155,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     if (col.expr) {
       const subqueryInfo = detectSubqueryInExpression(col.expr);
       if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
-        const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType);
+        const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType, parentTableRefs);
         nodes.push(subqueryNode);
         // Connect subquery to SELECT clause
         edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, selectNode.id));

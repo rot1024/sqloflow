@@ -1,0 +1,28 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Node definitions
+  node_0 [label="FROM products AS p", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="SELECT p.product_id, p.name", fillcolor=lightgreen, style="filled,rounded"];
+  node_1 [label="WHERE p.category_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
+
+  // Subquery 1
+  subgraph cluster_node_2 {
+    label="Subquery (in) - correlated on: p.launch_date";
+    style=filled;
+    fillcolor=lavender;
+    color=purple;
+    penwidth=2;
+    subq_2_node_0 [label="FROM categories AS c", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_1 [label="WHERE c.status = 'active' AND c.created_date > p.launch_date", fillcolor=lightyellow, style="filled,rounded"];
+    subq_2_node_2 [label="SELECT c.category_id", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_0 -> subq_2_node_1 [color=black];
+    subq_2_node_1 -> subq_2_node_2 [color=black];
+  }
+  subq_2_node_2 -> node_1 [color=purple, style=bold, label="set of values"];
+
+  // Edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_3 [color=black];
+}

@@ -9,10 +9,11 @@ digraph sqloflow {
 
   // Subquery 1
   subgraph cluster_node_2 {
-    label="Subquery (scalar)";
+    label="Subquery (scalar) - correlated on: o.customer_id";
     style=filled;
     fillcolor=lavender;
     color=purple;
+    penwidth=2;
     subq_2_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
     subq_2_node_1 [label="WHERE customer_id = o.customer_id", fillcolor=lightyellow, style="filled,rounded"];
     subq_2_node_2 [label="SELECT MAX(total_amount)", fillcolor=lightgreen, style="filled,rounded"];

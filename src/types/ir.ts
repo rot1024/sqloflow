@@ -32,7 +32,8 @@ export type EdgeKind =
   | "uses"
   | "defines"
   | "mapsTo"
-  | "subqueryResult";
+  | "subqueryResult"
+  | "correlation";
 
 export type Edge = {
   id: string;

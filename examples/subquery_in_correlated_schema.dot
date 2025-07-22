@@ -7,38 +7,38 @@ digraph sqloflow {
     label="Schema Snapshot 1";
     style=filled;
     fillcolor=lightgray;
-    // Relations: o
-    node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
+    // Relations: p
+    node_0 [label="FROM products AS p", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_1 {
     label="Schema Snapshot 2";
     style=filled;
     fillcolor=lightgray;
-    // Relations: o, orders
-    node_1 [label="WHERE o.total_amount = expr", fillcolor=lightyellow, style="filled,rounded"];
+    // Relations: p, c
+    node_1 [label="WHERE p.category_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_3 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
+    node_3 [label="SELECT p.product_id, p.name", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Subquery 1
   subgraph cluster_node_2 {
-    label="Subquery (scalar) - correlated on: o.customer_id";
+    label="Subquery (in) - correlated on: p.launch_date";
     style=filled;
     fillcolor=lavender;
     color=purple;
     penwidth=2;
-    subq_2_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-    subq_2_node_1 [label="WHERE customer_id = o.customer_id", fillcolor=lightyellow, style="filled,rounded"];
-    subq_2_node_2 [label="SELECT MAX(total_amount)", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_0 [label="FROM categories AS c", fillcolor=lightgreen, style="filled,rounded"];
+    subq_2_node_1 [label="WHERE c.status = 'active' AND c.created_date > p.launch_date", fillcolor=lightyellow, style="filled,rounded"];
+    subq_2_node_2 [label="SELECT c.category_id", fillcolor=lightgreen, style="filled,rounded"];
     subq_2_node_0 -> subq_2_node_1 [color=black];
     subq_2_node_1 -> subq_2_node_2 [color=black];
   }
-  subq_2_node_2 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
+  subq_2_node_2 -> node_1 [color=purple, style=bold, label="set of values"];
 
   // Schema transformation edges
   node_0 -> node_1 [color=black, label="schema change"];

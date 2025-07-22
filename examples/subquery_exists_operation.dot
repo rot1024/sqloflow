@@ -9,10 +9,11 @@ digraph sqloflow {
 
   // Subquery 1
   subgraph cluster_node_2 {
-    label="Subquery (exists)";
+    label="Subquery (exists) - correlated on: c.customer_id";
     style=filled;
     fillcolor=lavender;
     color=purple;
+    penwidth=2;
     subq_2_node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
     subq_2_node_1 [label="WHERE o.customer_id = c.customer_id AND o.status = 'pending'", fillcolor=lightyellow, style="filled,rounded"];
     subq_2_node_2 [label="SELECT 1", fillcolor=lightgreen, style="filled,rounded"];

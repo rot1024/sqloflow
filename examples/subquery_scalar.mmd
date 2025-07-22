@@ -1,7 +1,7 @@
 flowchart LR
     node_0[FROM orders AS o]
     node_1["WHERE o.total_amount = expr"]
-    subgraph subquery_node_2 ["Subquery (scalar)"]
+    subgraph subquery_node_2 ["Subquery (scalar) - correlated"]
         direction TB
         subq_2_node_0[FROM orders]
         subq_2_node_1["WHERE customer_id = o.customer_id"]

@@ -188,6 +188,8 @@ const getEdgeStyle = (kind: string): string => {
       return 'color=red, style=dashed';
     case 'subqueryResult':
       return 'color=purple, style=bold, label="subquery result"';
+    case 'correlation':
+      return 'color=orange, style=dashed, constraint=false';
     default:
       return '';
   }
@@ -254,10 +256,22 @@ const renderSubquerySubgraph = (subqueryNode: SubqueryNode, lines: string[], par
   
   // Phase 2: Render subquery as subgraph
   lines.push(`  subgraph cluster_${escapeId(subqueryNode.id)} {`);
-  lines.push(`    label="${escapeLabel(subqueryNode.label)}";`);
+  
+  // Update label to show correlation information
+  let label = subqueryNode.label;
+  if (subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0) {
+    label += ` - correlated on: ${subqueryNode.correlatedFields.join(', ')}`;
+  }
+  
+  lines.push(`    label="${escapeLabel(label)}";`);
   lines.push('    style=filled;');
   lines.push('    fillcolor=lavender;');
   lines.push('    color=purple;');
+  
+  // Add thicker border for correlated subqueries
+  if (subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0) {
+    lines.push('    penwidth=2;');
+  }
   
   // Render inner nodes
   subqueryNode.innerGraph.nodes.forEach(node => {
