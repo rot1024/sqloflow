@@ -5,11 +5,11 @@ digraph sqloflow {
   // Node definitions
   node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
   node_2 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
-  node_1 [label="FROM", fillcolor=lightgreen, style="filled,rounded"];
-  node_3 [label="INNER JOIN", fillcolor=lightgreen, style="filled,rounded"];
-  node_5 [label="SELECT", fillcolor=lightgreen, style="filled,rounded"];
-  node_6 [label="ORDER BY", fillcolor=lightgreen, style="filled,rounded"];
-  node_4 [label="WHERE", fillcolor=lightyellow, style="filled,rounded"];
+  node_1 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
+  node_5 [label="SELECT u.name, o.total", fillcolor=lightgreen, style="filled,rounded"];
+  node_6 [label="ORDER BY o.total DESC", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="WHERE o.total > 100", fillcolor=lightyellow, style="filled,rounded"];
 
   // Edges
   node_0 -> node_1 [color=black];

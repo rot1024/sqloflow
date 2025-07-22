@@ -127,4 +127,24 @@ describe('Mermaid renderer', () => {
     expect(result).toContain('node_');
     expect(result).toContain('-->');
   });
+
+  it('should render UNION ALL query', () => {
+    const sql = `
+      SELECT id, name, 'user' AS source
+      FROM users
+      UNION ALL
+      SELECT id, company_name AS name, 'org' AS source
+      FROM organizations
+    `;
+    
+    const ast = parse(sql);
+    const ir = convert(ast);
+    const result = renderMermaid(ir);
+    
+    // Expected structure
+    expect(result).toContain('flowchart LR');
+    expect(result).toContain('FROM users');
+    expect(result).toContain('FROM organizations');
+    expect(result).toContain('UNION ALL');
+  });
 });

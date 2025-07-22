@@ -34,8 +34,95 @@ export const getTableName = (table: any): string => {
 };
 
 export const expressionToSQL = (expr: any): string => {
-  // Simplified expression conversion
-  return JSON.stringify(expr);
+  if (!expr) return '';
+  
+  switch (expr.type) {
+    case 'binary_expr':
+      const left = expressionToSQL(expr.left);
+      const right = expressionToSQL(expr.right);
+      return `${left} ${expr.operator} ${right}`;
+      
+    case 'column_ref':
+      return getColumnName(expr);
+      
+    case 'number':
+      return expr.value.toString();
+      
+    case 'string':
+    case 'single_quote_string':
+      return `'${expr.value}'`;
+      
+    case 'double_quote_string':
+      return `"${expr.value}"`;
+      
+    case 'bool':
+      return expr.value ? 'TRUE' : 'FALSE';
+      
+    case 'null':
+      return 'NULL';
+      
+    case 'function':
+    case 'aggr_func':
+      const funcName = expr.name.toUpperCase();
+      let args = '';
+      if (expr.args) {
+        if (Array.isArray(expr.args)) {
+          args = expr.args.map((a: any) => expressionToSQL(a)).join(', ');
+        } else if (expr.args.expr && expr.args.expr.type === 'star') {
+          args = '*';
+        } else {
+          args = expressionToSQL(expr.args);
+        }
+      }
+      return `${funcName}(${args})`;
+      
+    case 'expr_list':
+      return expr.value.map((e: any) => expressionToSQL(e)).join(', ');
+      
+    case 'case':
+      let caseStr = 'CASE';
+      if (expr.expr) caseStr += ` ${expressionToSQL(expr.expr)}`;
+      if (expr.when) {
+        expr.when.forEach((w: any) => {
+          caseStr += ` WHEN ${expressionToSQL(w.when)} THEN ${expressionToSQL(w.then)}`;
+        });
+      }
+      if (expr.else) caseStr += ` ELSE ${expressionToSQL(expr.else)}`;
+      caseStr += ' END';
+      return caseStr;
+      
+    case 'in':
+    case 'not_in':
+      const inExpr = expressionToSQL(expr.left);
+      const inList = expr.right.map((r: any) => expressionToSQL(r)).join(', ');
+      return `${inExpr} ${expr.type === 'not_in' ? 'NOT IN' : 'IN'} (${inList})`;
+      
+    case 'between':
+    case 'not_between':
+      const betweenExpr = expressionToSQL(expr.left);
+      const lower = expressionToSQL(expr.right.left);
+      const upper = expressionToSQL(expr.right.right);
+      return `${betweenExpr} ${expr.type === 'not_between' ? 'NOT BETWEEN' : 'BETWEEN'} ${lower} AND ${upper}`;
+      
+    case 'is':
+    case 'is_not':
+      const isExpr = expressionToSQL(expr.left);
+      const isValue = expressionToSQL(expr.right);
+      return `${isExpr} ${expr.type === 'is_not' ? 'IS NOT' : 'IS'} ${isValue}`;
+      
+    case 'like':
+    case 'not_like':
+      const likeExpr = expressionToSQL(expr.left);
+      const pattern = expressionToSQL(expr.right);
+      return `${likeExpr} ${expr.type === 'not_like' ? 'NOT LIKE' : 'LIKE'} ${pattern}`;
+      
+    case 'unary_expr':
+      return `${expr.operator}${expressionToSQL(expr.expr)}`;
+      
+    default:
+      // Fallback for unknown expression types
+      return JSON.stringify(expr);
+  }
 };
 
 export const selectListToSQL = (columns: any[]): string => {
@@ -70,19 +157,34 @@ export const getColumnName = (expr: any): string => {
 
 export const groupByToSQL = (groupby: any): string => {
   if (Array.isArray(groupby)) {
-    return groupby.map(g => g.column || 'expr').join(', ');
+    return groupby.map(g => {
+      if (g.type === 'column_ref') {
+        return getColumnName(g);
+      }
+      return g.column || expressionToSQL(g) || 'expr';
+    }).join(', ');
   }
-  return 'GROUP BY';
+  return '';
 };
 
 export const orderByToSQL = (orderby: any[]): string => {
-  return orderby.map(o => `${o.expr.column || 'expr'} ${o.type || 'ASC'}`).join(', ');
+  return orderby.map(o => {
+    const expr = o.expr ? expressionToSQL(o.expr) : 'expr';
+    const direction = o.type || 'ASC';
+    return `${expr} ${direction}`;
+  }).join(', ');
 };
 
 export const limitToSQL = (limit: any): string => {
   if (limit && limit.value) {
     if (Array.isArray(limit.value)) {
-      return limit.value[0].value.toString();
+      // Handle LIMIT and OFFSET
+      const limitValue = limit.value[0]?.value?.toString() || '';
+      const offsetValue = limit.value[1]?.value?.toString() || '';
+      if (offsetValue) {
+        return `${limitValue} OFFSET ${offsetValue}`;
+      }
+      return limitValue;
     }
     return limit.value.toString();
   }

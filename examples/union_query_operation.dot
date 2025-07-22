@@ -1,0 +1,23 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Node definitions
+  node_0 [label="users", fillcolor=lightblue, style="filled,rounded"];
+  node_4 [label="organizations", fillcolor=lightblue, style="filled,rounded"];
+  node_1 [label="FROM users", fillcolor=lightgreen, style="filled,rounded"];
+  node_2 [label="SELECT id, name, expr", fillcolor=lightgreen, style="filled,rounded"];
+  node_3 [label="UNION ALL", fillcolor=lightgreen, style="filled,rounded"];
+  node_5 [label="FROM organizations", fillcolor=lightgreen, style="filled,rounded"];
+  node_6 [label="SELECT id, company_name AS name, expr", fillcolor=lightgreen, style="filled,rounded"];
+  node_7 [label="Result", fillcolor=lightgreen, style="filled,rounded"];
+
+  // Edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black];
+  node_2 -> node_3 [color=black];
+  node_4 -> node_5 [color=black];
+  node_5 -> node_6 [color=black];
+  node_6 -> node_3 [color=black];
+  node_3 -> node_7 [color=black];
+}

@@ -12,21 +12,21 @@ digraph sqloflow {
     style=filled;
     fillcolor=lightgray;
     // Relations: products
-    node_4 [label="FROM", fillcolor=lightgreen, style="filled,rounded"];
+    node_4 [label="FROM products", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_1 {
     label="Schema Snapshot 2";
     style=filled;
     fillcolor=lightgray;
     // Relations: products
-    node_5 [label="WHERE", fillcolor=lightyellow, style="filled,rounded"];
+    node_5 [label="WHERE price > 50", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_6 [label="SELECT", fillcolor=lightgreen, style="filled,rounded"];
+    node_6 [label="SELECT name, price", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Schema transformation edges

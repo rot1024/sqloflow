@@ -131,6 +131,32 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: any): { nod
     lastNodeId = limitNode.id;
   }
 
+  // Handle UNION/UNION ALL
+  if (stmt._next && stmt.set_op) {
+    const unionType = stmt.set_op.toUpperCase();
+    const unionNode = createNode(ctx, 'op', unionType, unionType);
+    nodes.push(unionNode);
+    
+    // Connect first SELECT to UNION
+    edges.push(createEdge(ctx, 'flow', lastNodeId, unionNode.id));
+    
+    // Process the next SELECT statement
+    const nextResult = convertSelectStatement(ctx, stmt._next);
+    nodes.push(...nextResult.nodes);
+    edges.push(...nextResult.edges);
+    
+    // Find the last node of the second SELECT
+    if (nextResult.nodes.length > 0) {
+      const secondSelectLastNode = nextResult.nodes[nextResult.nodes.length - 1];
+      edges.push(createEdge(ctx, 'flow', secondSelectLastNode.id, unionNode.id));
+    }
+    
+    // Create result node after UNION
+    const resultNode = createNode(ctx, 'op', 'Result', 'Result');
+    nodes.push(resultNode);
+    edges.push(createEdge(ctx, 'flow', unionNode.id, resultNode.id));
+  }
+
   return { nodes, edges };
 };
 

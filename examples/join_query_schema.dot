@@ -5,34 +5,34 @@ digraph sqloflow {
   // Schema view with snapshots
   node_0 [label="users AS u", fillcolor=lightblue, style="filled,rounded"];
   node_2 [label="orders AS o", fillcolor=lightblue, style="filled,rounded"];
-  node_6 [label="ORDER BY", fillcolor=lightgreen, style="filled,rounded"];
+  node_6 [label="ORDER BY o.total DESC", fillcolor=lightgreen, style="filled,rounded"];
   subgraph cluster_0 {
     label="Schema Snapshot 1";
     style=filled;
     fillcolor=lightgray;
     // Relations: u
-    node_1 [label="FROM", fillcolor=lightgreen, style="filled,rounded"];
+    node_1 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_1 {
     label="Schema Snapshot 2";
     style=filled;
     fillcolor=lightgray;
     // Relations: u, o
-    node_3 [label="INNER JOIN", fillcolor=lightgreen, style="filled,rounded"];
+    node_3 [label="INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
   }
   subgraph cluster_2 {
     label="Schema Snapshot 3";
     style=filled;
     fillcolor=lightgray;
     // Relations: u, o
-    node_4 [label="WHERE", fillcolor=lightyellow, style="filled,rounded"];
+    node_4 [label="WHERE o.total > 100", fillcolor=lightyellow, style="filled,rounded"];
   }
   subgraph cluster_3 {
     label="Schema Snapshot 4";
     style=filled;
     fillcolor=lightgray;
     // Relations: _result
-    node_5 [label="SELECT", fillcolor=lightgreen, style="filled,rounded"];
+    node_5 [label="SELECT u.name, o.total", fillcolor=lightgreen, style="filled,rounded"];
   }
 
   // Schema transformation edges

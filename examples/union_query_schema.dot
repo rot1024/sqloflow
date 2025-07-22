@@ -1,0 +1,47 @@
+digraph sqloflow {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+
+  // Schema view with snapshots
+  node_0 [label="users", fillcolor=lightblue, style="filled,rounded"];
+  node_3 [label="UNION ALL", fillcolor=lightgreen, style="filled,rounded"];
+  node_4 [label="organizations", fillcolor=lightblue, style="filled,rounded"];
+  node_7 [label="Result", fillcolor=lightgreen, style="filled,rounded"];
+  subgraph cluster_0 {
+    label="Schema Snapshot 1";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: users
+    node_1 [label="FROM users", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_1 {
+    label="Schema Snapshot 2";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result
+    node_2 [label="SELECT id, name, expr", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_2 {
+    label="Schema Snapshot 3";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result, organizations
+    node_5 [label="FROM organizations", fillcolor=lightgreen, style="filled,rounded"];
+  }
+  subgraph cluster_3 {
+    label="Schema Snapshot 4";
+    style=filled;
+    fillcolor=lightgray;
+    // Relations: _result
+    node_6 [label="SELECT id, company_name AS name, expr", fillcolor=lightgreen, style="filled,rounded"];
+  }
+
+  // Schema transformation edges
+  node_0 -> node_1 [color=black];
+  node_1 -> node_2 [color=black, label="schema change"];
+  node_2 -> node_3 [color=black];
+  node_4 -> node_5 [color=black];
+  node_5 -> node_6 [color=black, label="schema change"];
+  node_6 -> node_3 [color=black];
+  node_3 -> node_7 [color=black];
+}

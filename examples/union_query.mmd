@@ -1,0 +1,16 @@
+flowchart LR
+    node_0[users]
+    node_1[FROM users]
+    node_2["SELECT id, name, expr"]
+    node_3[UNION ALL]
+    node_4[organizations]
+    node_5[FROM organizations]
+    node_6["SELECT id, company_name AS name, expr"]
+    node_7[Result]
+    node_0 --> node_1
+    node_1 --> node_2
+    node_2 --> node_3
+    node_4 --> node_5
+    node_5 --> node_6
+    node_6 --> node_3
+    node_3 --> node_7

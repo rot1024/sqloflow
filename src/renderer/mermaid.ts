@@ -67,16 +67,35 @@ export const renderMermaid = (graph: Graph): string => {
 const formatNode = (node: Node): string => {
   const nodeId = sanitizeId(node.id);
   const label = escapeLabel(node.label);
+  const sql = node.sql ? escapeLabel(node.sql) : '';
   
   switch (node.kind) {
     case 'relation':
       return `${nodeId}[${label}]`;
     case 'op':
-      if (node.label.includes('JOIN')) {
-        return `${nodeId}[${label}]`;
+      // Always show SQL details if available
+      if (sql && (
+        node.label === 'FROM' || 
+        node.label === 'SELECT' || 
+        node.label === 'ORDER BY' || 
+        node.label === 'GROUP BY' || 
+        node.label === 'LIMIT' ||
+        node.label === 'OFFSET' ||
+        node.label.includes('JOIN')
+      )) {
+        // For FROM, just show the SQL
+        if (node.label === 'FROM') {
+          return `${nodeId}[${sql}]`;
+        }
+        // For others, show both label and SQL
+        return `${nodeId}["${label} ${sql}"]`;
       }
       return `${nodeId}[${label}]`;
     case 'clause':
+      // Always show SQL details for clauses if available
+      if (sql && (node.label === 'WHERE' || node.label === 'HAVING')) {
+        return `${nodeId}["${label} ${sql}"]`;
+      }
       return `${nodeId}[${label}]`;
     default:
       return `${nodeId}[${label}]`;

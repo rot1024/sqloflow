@@ -33,7 +33,8 @@ const renderOperationView = (graph: Graph, lines: string[]) => {
   nodesByKind.forEach((nodes, kind) => {
     const style = getNodeStyle(kind);
     nodes.forEach(node => {
-      lines.push(`  ${escapeId(node.id)} [label="${escapeLabel(node.label)}"${style}];`);
+      const label = formatNodeLabel(node);
+      lines.push(`  ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
     });
   });
   
@@ -84,7 +85,8 @@ const renderSchemaView = (graph: Graph, lines: string[]) => {
       
       nodes.forEach(({ node }) => {
         const style = getNodeStyle(node.kind);
-        lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(node.label)}"${style}];`);
+        const label = formatNodeLabel(node);
+        lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
       });
       
       lines.push('  }');
@@ -93,7 +95,8 @@ const renderSchemaView = (graph: Graph, lines: string[]) => {
       // Nodes without snapshots
       nodes.forEach(({ node }) => {
         const style = getNodeStyle(node.kind);
-        lines.push(`  ${escapeId(node.id)} [label="${escapeLabel(node.label)}"${style}];`);
+        const label = formatNodeLabel(node);
+        lines.push(`  ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
       });
     }
   });
@@ -165,4 +168,38 @@ const escapeLabel = (label: string): string => {
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/\n/g, '\\n');
+};
+
+const formatNodeLabel = (node: Node): string => {
+  const { label, sql, kind } = node;
+  
+  switch (kind) {
+    case 'op':
+      // Always show SQL details if available
+      if (sql && (
+        label === 'FROM' || 
+        label === 'SELECT' || 
+        label === 'ORDER BY' || 
+        label === 'GROUP BY' || 
+        label === 'LIMIT' ||
+        label === 'OFFSET' ||
+        label.includes('JOIN')
+      )) {
+        // For FROM, just show the SQL
+        if (label === 'FROM') {
+          return sql;
+        }
+        // For others, show both label and SQL
+        return `${label} ${sql}`;
+      }
+      return label;
+    case 'clause':
+      // Always show SQL details for clauses if available
+      if (sql && (label === 'WHERE' || label === 'HAVING')) {
+        return `${label} ${sql}`;
+      }
+      return label;
+    default:
+      return label;
+  }
 };

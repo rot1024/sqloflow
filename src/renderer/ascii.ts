@@ -35,7 +35,8 @@ const calculateLayout = (graph: Graph): Map<string, LayoutNode> => {
   nodesByLevel.forEach((nodes, level) => {
     let currentY = 0;
     nodes.forEach(node => {
-      const width = Math.max(node.label.length + 4, 10);
+      const label = formatNodeLabel(node);
+      const width = Math.max(label.length + 4, 10);
       const height = 3;
       
       layout.set(node.id, {
@@ -48,7 +49,7 @@ const calculateLayout = (graph: Graph): Map<string, LayoutNode> => {
       currentY += height + nodeSpacing;
     });
     
-    currentX += Math.max(...nodes.map(n => Math.max(n.label.length + 4, 10))) + levelSpacing;
+    currentX += Math.max(...nodes.map(n => Math.max(formatNodeLabel(n).length + 4, 10))) + levelSpacing;
   });
   
   return layout;
@@ -147,7 +148,8 @@ const drawBox = (canvas: string[][], layoutNode: LayoutNode) => {
   
   // Middle with text
   canvas[y + 1][x] = '│';
-  const text = node.label.substring(0, width - 4);
+  const label = formatNodeLabel(node);
+  const text = label.substring(0, width - 4);
   const padding = Math.floor((width - 2 - text.length) / 2);
   for (let i = 0; i < width - 2; i++) {
     if (i >= padding && i < padding + text.length) {
@@ -198,5 +200,39 @@ const drawEdge = (canvas: string[][], from: LayoutNode, to: LayoutNode) => {
         }
       }
     }
+  }
+};
+
+const formatNodeLabel = (node: Node): string => {
+  const { label, sql, kind } = node;
+  
+  switch (kind) {
+    case 'op':
+      // Always show SQL details if available
+      if (sql && (
+        label === 'FROM' || 
+        label === 'SELECT' || 
+        label === 'ORDER BY' || 
+        label === 'GROUP BY' || 
+        label === 'LIMIT' ||
+        label === 'OFFSET' ||
+        label.includes('JOIN')
+      )) {
+        // For FROM, just show the SQL
+        if (label === 'FROM') {
+          return sql;
+        }
+        // For others, show both label and SQL
+        return `${label} ${sql}`;
+      }
+      return label;
+    case 'clause':
+      // Always show SQL details for clauses if available
+      if (sql && (label === 'WHERE' || label === 'HAVING')) {
+        return `${label} ${sql}`;
+      }
+      return label;
+    default:
+      return label;
   }
 };
