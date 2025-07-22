@@ -4,7 +4,7 @@ digraph sqloflow {
 
   // Node definitions
   node_0 [label="FROM users AS u", fillcolor=lightgreen, style="filled,rounded"];
-  node_1 [label="INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
+  node_1 [label="INNER JOIN orders AS o ON u.id = o.user_id", fillcolor=lightgreen, style="filled,rounded"];
   node_3 [label="SELECT u.name, o.total", fillcolor=lightgreen, style="filled,rounded"];
   node_4 [label="ORDER BY o.total DESC", fillcolor=lightgreen, style="filled,rounded"];
   node_2 [label="WHERE o.total > 100", fillcolor=lightyellow, style="filled,rounded"];

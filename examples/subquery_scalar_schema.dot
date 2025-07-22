@@ -1,46 +1,34 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: o
-    node_0 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: o, orders
-    node_1 [label="WHERE o.total_amount = expr", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_3 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM orders AS o|total_amount\nid", style=filled, fillcolor=lightgreen];
 
-  // Subquery 1
+  // Operations
+  node_1 [label="WHERE|o.total_amount = expr", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_3;
+
   subgraph cluster_node_2 {
-    label="Subquery (scalar) - correlated on: o.customer_id";
+    label="SCALAR Subquery (correlated: o.customer_id)";
     style=filled;
-    fillcolor=lavender;
-    color=purple;
-    penwidth=2;
-    subq_0_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_1 [label="WHERE customer_id = o.customer_id", fillcolor=lightyellow, style="filled,rounded"];
-    subq_0_node_2 [label="SELECT MAX(total_amount)", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_0 -> subq_0_node_1 [color=black];
-    subq_0_node_1 -> subq_0_node_2 [color=black];
+    color=lightgrey;
+    node [style=filled,color=white];
+    // Source tables
+    subq_0_node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
+    // Operations
+    subq_0_node_1 [label="WHERE|customer_id = o.customer_id", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|MAX(total_amount)", style=filled, fillcolor=lightyellow];
+    // Data flow edges
+    // JOIN operations with table info
+    subq_0_node_0 -> subq_0_node_1;
+    subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
-
-  // Schema transformation edges
-  node_0 -> node_1 [color=black, label="schema change"];
-  node_1 -> node_3 [color=black, label="schema change"];
+  subq_0_node_2 -> node_1 [label="scalar value"];
 }

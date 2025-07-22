@@ -8,12 +8,10 @@ digraph sqloflow {
   node_2 [label="UNION ALL", fillcolor=lightgreen, style="filled,rounded"];
   node_3 [label="FROM organizations", fillcolor=lightgreen, style="filled,rounded"];
   node_4 [label="SELECT id, company_name AS name, 'org' AS source", fillcolor=lightgreen, style="filled,rounded"];
-  node_5 [label="Result", fillcolor=lightgreen, style="filled,rounded"];
 
   // Edges
   node_0 -> node_1 [color=black];
   node_1 -> node_2 [color=black];
   node_3 -> node_4 [color=black];
   node_4 -> node_2 [color=black];
-  node_2 -> node_5 [color=black];
 }

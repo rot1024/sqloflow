@@ -257,10 +257,9 @@ export const tableToSQL = (table: TableLike): string => {
 };
 
 export const joinToSQL = (table: Join): string => {
-  const joinType = table.join || 'INNER JOIN';
   const tableName = getTableLabel(table);
   const onClause = table.on ? ` ON ${expressionToSQL(table.on)}` : '';
-  return `${joinType} ${tableName}${onClause}`;
+  return `${tableName}${onClause}`;
 };
 
 // Subquery detection helpers

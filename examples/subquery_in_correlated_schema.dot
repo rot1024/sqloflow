@@ -1,46 +1,34 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: p
-    node_0 [label="FROM products AS p", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: p, c
-    node_1 [label="WHERE p.category_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_3 [label="SELECT p.product_id, p.name", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM products AS p|category_id\nproduct_id\nname", style=filled, fillcolor=lightgreen];
 
-  // Subquery 1
+  // Operations
+  node_1 [label="WHERE|p.category_id IN expr", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|p.product_id\np.name", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_3;
+
   subgraph cluster_node_2 {
-    label="Subquery (in) - correlated on: p.launch_date";
+    label="IN Subquery (correlated: p.launch_date)";
     style=filled;
-    fillcolor=lavender;
-    color=purple;
-    penwidth=2;
-    subq_0_node_0 [label="FROM categories AS c", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_1 [label="WHERE c.status = 'active' AND c.created_date > p.launch_date", fillcolor=lightyellow, style="filled,rounded"];
-    subq_0_node_2 [label="SELECT c.category_id", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_0 -> subq_0_node_1 [color=black];
-    subq_0_node_1 -> subq_0_node_2 [color=black];
+    color=lightgrey;
+    node [style=filled,color=white];
+    // Source tables
+    subq_0_node_0 [label="FROM categories AS c|status\ncreated_date\ncategory_id", style=filled, fillcolor=lightgreen];
+    // Operations
+    subq_0_node_1 [label="WHERE|c.status = 'active' AND c.created_date \> p.launch_date", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|c.category_id", style=filled, fillcolor=lightyellow];
+    // Data flow edges
+    // JOIN operations with table info
+    subq_0_node_0 -> subq_0_node_1;
+    subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [color=purple, style=bold, label="set of values"];
-
-  // Schema transformation edges
-  node_0 -> node_1 [color=black, label="schema change"];
-  node_1 -> node_3 [color=black, label="schema change"];
+  subq_0_node_2 -> node_1 [label="value list"];
 }

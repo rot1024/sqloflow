@@ -1,37 +1,17 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: products
-    node_0 [label="FROM products", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  node_1 [label="id", fillcolor=lightcoral, style="filled,rounded", shape=ellipse];
-  node_2 [label="name", fillcolor=lightcoral, style="filled,rounded", shape=ellipse];
-  node_3 [label="price", fillcolor=lightcoral, style="filled,rounded", shape=ellipse];
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: products
-    node_4 [label="WHERE price > 50", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_5 [label="SELECT name, price", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM products|id\nname\nprice", style=filled, fillcolor=lightgreen];
 
-  // Schema transformation edges
-  node_0 -> node_1 [color=green, style=dotted];
-  node_0 -> node_2 [color=green, style=dotted];
-  node_0 -> node_3 [color=green, style=dotted];
-  node_0 -> node_4 [color=black, label="schema change"];
-  node_4 -> node_5 [color=black, label="schema change"];
+  // Operations
+  node_4 [label="WHERE|price \> 50", style=filled, fillcolor=lightyellow];
+  node_5 [label="SELECT|name\nprice", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_4;
+  node_4 -> node_5;
 }

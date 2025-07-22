@@ -258,3 +258,42 @@ export const inferColumnsFromExpression = (ctx: ConversionContext, expr: Express
     }
   }
 };
+
+export const applyUnionTransformation = (ctx: ConversionContext, nodeId: string): void => {
+  applySchemaTransformation(ctx, nodeId, (schema) => {
+    const newSchema: Record<string, RelationSchema> = {};
+    
+    // Create a new relation for the UNION result
+    const unionRelation: RelationSchema = {
+      name: '_result',
+      columns: []
+    };
+    
+    // Find the result relations from both SELECT statements
+    // They should be the most recent _result relations in the schema
+    const resultRelations = Object.entries(schema)
+      .filter(([key]) => key === '_result')
+      .map(([_, rel]) => rel);
+    
+    if (resultRelations.length > 0) {
+      // Use the columns from the first SELECT as the base
+      // UNION requires compatible column structures
+      const baseColumns = resultRelations[0].columns;
+      
+      // Copy columns to the union result
+      baseColumns.forEach(col => {
+        unionRelation.columns.push({
+          id: `_result.${col.name}`,
+          name: col.name,
+          type: col.type,
+          source: '_result'
+        });
+      });
+    }
+    
+    // Keep the union result
+    newSchema._result = unionRelation;
+    
+    return newSchema;
+  });
+};

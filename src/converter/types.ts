@@ -8,4 +8,5 @@ export interface ConversionContext {
   schema: SchemaInfo;
   currentSchema: Record<string, RelationSchema>;
   snapshots: SchemaSnapshot[];
+  cteNodes?: Record<string, string>; // Maps CTE name to its last node ID
 }

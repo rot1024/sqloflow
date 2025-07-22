@@ -1,43 +1,21 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: users
-    node_0 [label="FROM users", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_1 [label="SELECT id, name, 'user' AS source", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  node_2 [label="UNION ALL", fillcolor=lightgreen, style="filled,rounded"];
-  node_5 [label="Result", fillcolor=lightgreen, style="filled,rounded"];
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result, organizations
-    node_3 [label="FROM organizations", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_3 {
-    label="Schema Snapshot 4";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_4 [label="SELECT id, company_name AS name, 'org' AS source", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM users", style=filled, fillcolor=lightgreen];
+  node_3 [label="FROM organizations", style=filled, fillcolor=lightgreen];
 
-  // Schema transformation edges
-  node_0 -> node_1 [color=black, label="schema change"];
-  node_1 -> node_2 [color=black];
-  node_3 -> node_4 [color=black, label="schema change"];
-  node_4 -> node_2 [color=black];
-  node_2 -> node_5 [color=black];
+  // Operations
+  node_1 [label="SELECT|id\nname\nuser AS source", style=filled, fillcolor=lightyellow];
+  node_2 [label="UNION ALL|id\nname\nsource", style=filled, fillcolor=lightyellow];
+  node_4 [label="SELECT|id\ncompany_name AS name\norg AS source", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_2;
+  node_3 -> node_4;
+  node_4 -> node_2;
 }

@@ -1,8 +1,16 @@
 import type { Graph, Node, Edge, SubqueryNode } from '../types/ir.js';
 import type { JsonViewType } from '../types/renderer.js';
 import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
+import { renderSchemaViewEnhanced } from './schema-dot.js';
 
 export const renderDot = (graph: Graph, viewType: JsonViewType = 'operation'): string => {
+  // Use enhanced schema view if enabled
+  const useEnhancedSchemaView = true; // Feature flag
+  
+  if (viewType === 'schema' && useEnhancedSchemaView) {
+    return renderSchemaViewEnhanced(graph);
+  }
+  
   const lines: string[] = [];
   lines.push('digraph sqloflow {');
   lines.push('  rankdir=LR;');
@@ -24,9 +32,84 @@ const renderOperationView = (graph: Graph, lines: string[]) => {
   const subqueryNodes = graph.nodes.filter(n => n.kind === 'subquery') as SubqueryNode[];
   const regularNodes = graph.nodes.filter(n => n.kind !== 'subquery');
   
-  // Group regular nodes by kind for styling
+  // Track CTE nodes and their associated nodes
+  const cteNodes = new Map<string, string>(); // CTE node ID -> CTE name
+  const processedNodes = new Set<string>();
+  
+  // First pass: identify CTE nodes
+  graph.nodes.forEach(node => {
+    if (node.kind === 'relation' && node.label.startsWith('CTE:')) {
+      const cteName = node.label.replace('CTE: ', '');
+      cteNodes.set(node.id, cteName);
+    }
+  });
+  
+  // Render CTEs as subgraphs first
+  cteNodes.forEach((cteName, cteNodeId) => {
+    // Find all nodes that lead to this CTE node
+    const cteSubgraphNodes = new Set<string>();
+    
+    // Traverse backwards from the CTE node to find all nodes in the CTE
+    const findCTENodes = (nodeId: string) => {
+      if (cteSubgraphNodes.has(nodeId)) return;
+      cteSubgraphNodes.add(nodeId);
+      
+      // Find edges that lead to this node
+      graph.edges.forEach(edge => {
+        if (edge.to.node === nodeId && edge.kind === 'flow') {
+          findCTENodes(edge.from.node);
+        }
+      });
+    };
+    
+    // Start from edges that define the CTE
+    graph.edges.forEach(edge => {
+      if (edge.to.node === cteNodeId && edge.kind === 'defines') {
+        findCTENodes(edge.from.node);
+      }
+    });
+    
+    // Render CTE as subgraph
+    if (cteSubgraphNodes.size > 0) {
+      lines.push('');
+      lines.push(`  subgraph cluster_${cteNodeId} {`);
+      lines.push(`    label="CTE: ${cteName}";`);
+      lines.push('    style=filled;');
+      lines.push('    fillcolor=lightblue;');
+      lines.push('    color=blue;');
+      lines.push('    penwidth=2;');
+      
+      // Render nodes in the CTE
+      cteSubgraphNodes.forEach(nodeId => {
+        const node = graph.nodes.find(n => n.id === nodeId);
+        if (node) {
+          processedNodes.add(nodeId);
+          const style = getNodeStyle(node.kind);
+          const label = formatNodeLabel(node);
+          lines.push(`    ${escapeId(node.id)} [label="${escapeLabel(label)}"${style}];`);
+        }
+      });
+      
+      // Render edges within the CTE
+      graph.edges.forEach(edge => {
+        if (cteSubgraphNodes.has(edge.from.node) && cteSubgraphNodes.has(edge.to.node) && edge.kind === 'flow') {
+          const style = getEdgeStyle(edge.kind);
+          const attrs = style ? ` [${style}]` : '';
+          lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)}${attrs};`);
+        }
+      });
+      
+      lines.push('  }');
+    }
+    
+    // Don't render the CTE node itself as it's represented by the subgraph
+    processedNodes.add(cteNodeId);
+  });
+  
+  // Group regular nodes by kind for styling (excluding already processed CTE nodes)
   const nodesByKind = new Map<string, Node[]>();
   regularNodes.forEach(node => {
+    if (processedNodes.has(node.id)) return;
     if (!nodesByKind.has(node.kind)) {
       nodesByKind.set(node.kind, []);
     }
@@ -61,11 +144,59 @@ const renderOperationView = (graph: Graph, lines: string[]) => {
       return;
     }
     
+    // Skip edges that are internal to CTE subgraphs
+    let skipEdge = false;
+    cteNodes.forEach((cteName, cteNodeId) => {
+      // Check if both nodes are in the same CTE
+      const fromInThisCTE = processedNodes.has(edge.from.node) && edge.from.node !== cteNodeId;
+      const toInThisCTE = processedNodes.has(edge.to.node) && edge.to.node !== cteNodeId;
+      if (fromInThisCTE && toInThisCTE) {
+        skipEdge = true;
+      }
+    });
+    
+    if (skipEdge) return;
+    
+    // Check if this edge involves a CTE
+    let fromInCTE = false;
+    let toInCTE = false;
+    let fromCTEId = '';
+    
+    cteNodes.forEach((cteName, cteNodeId) => {
+      if (edge.from.node === cteNodeId) {
+        fromInCTE = true;
+        fromCTEId = cteNodeId;
+      }
+      if (edge.to.node === cteNodeId) {
+        toInCTE = true;
+      }
+    });
+    
     const style = getEdgeStyle(edge.kind);
     const fromHandle = edge.from.handle ? `:${escapeId(edge.from.handle)}` : '';
     const toHandle = edge.to.handle ? `:${escapeId(edge.to.handle)}` : '';
     const attrs = style ? ` [${style}]` : '';
-    lines.push(`  ${escapeId(edge.from.node)}${fromHandle} -> ${escapeId(edge.to.node)}${toHandle}${attrs};`);
+    
+    // For edges from CTE nodes, find the last node in the CTE to connect from
+    if (fromInCTE) {
+      // Find the last node in the CTE subgraph to connect from
+      let lastCTENode: string | null = null;
+      
+      // Find the node that has an edge TO the CTE node with 'defines' kind
+      graph.edges.forEach(e => {
+        if (e.to.node === fromCTEId && e.kind === 'defines') {
+          lastCTENode = e.from.node;
+        }
+      });
+      
+      if (lastCTENode) {
+        lines.push(`  ${escapeId(lastCTENode)}${fromHandle} -> ${escapeId(edge.to.node)}${toHandle}${attrs};`);
+      }
+    } else if (toInCTE) {
+      // Skip edges to CTE nodes as they're handled by the subgraph
+    } else {
+      lines.push(`  ${escapeId(edge.from.node)}${fromHandle} -> ${escapeId(edge.to.node)}${toHandle}${attrs};`);
+    }
   });
 };
 
@@ -226,9 +357,12 @@ const formatNodeLabel = (node: Node): string => {
         label === 'OFFSET' ||
         label.includes('JOIN')
       )) {
-        // For FROM, just show the SQL
+        // For FROM and JOIN, handle table aliases
         if (label === 'FROM') {
           return sql;
+        }
+        if (label.includes('JOIN')) {
+          return `${label} ${sql}`;
         }
         // For others, show both label and SQL
         return `${label} ${sql}`;

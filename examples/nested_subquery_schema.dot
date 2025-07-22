@@ -1,57 +1,50 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: orders
-    node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: orders, customers
-    node_1 [label="WHERE amount > expr", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_3 [label="SELECT *", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
 
-  // Subquery 1
+  // Operations
+  node_1 [label="WHERE|amount \> expr", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|*", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_3;
+
   subgraph cluster_node_2 {
-    label="Subquery (scalar)";
+    label="SCALAR Subquery";
     style=filled;
-    fillcolor=lavender;
-    color=purple;
-    subq_0_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_1 [label="WHERE customer_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
-    subgraph cluster_subq_0_node_2 {
-      label="Subquery (in)";
-      style=filled;
-      fillcolor=lavender;
-      color=purple;
-      subq_1_node_0 [label="FROM customers", fillcolor=lightgreen, style="filled,rounded"];
-      subq_1_node_1 [label="WHERE country = 'JP'", fillcolor=lightyellow, style="filled,rounded"];
-      subq_1_node_2 [label="SELECT id", fillcolor=lightgreen, style="filled,rounded"];
-      subq_1_node_0 -> subq_1_node_1 [color=black];
-      subq_1_node_1 -> subq_1_node_2 [color=black];
+    color=lightgrey;
+    node [style=filled,color=white];
+    // Source tables
+    subq_0_node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
+    // Operations
+    subq_0_node_2 [label="WHERE|customer_id IN expr", style=filled, fillcolor=lightyellow];
+    subq_0_node_4 [label="SELECT|AVG(amount)", style=filled, fillcolor=lightyellow];
+    // Data flow edges
+    // JOIN operations with table info
+    subq_0_node_0 -> subq_0_node_2;
+    subq_0_node_2 -> subq_0_node_4;
+    subgraph cluster_subq_0_node_3 {
+    label="IN Subquery";
+    style=filled;
+    color=lightgrey;
+    node [style=filled,color=white];
+    // Source tables
+    subq_1_node_0 [label="FROM customers", style=filled, fillcolor=lightgreen];
+    // Operations
+    subq_1_node_1 [label="WHERE|country = 'JP'", style=filled, fillcolor=lightyellow];
+    subq_1_node_2 [label="SELECT|id", style=filled, fillcolor=lightyellow];
+    // Data flow edges
+    // JOIN operations with table info
+    subq_1_node_0 -> subq_1_node_1;
+    subq_1_node_1 -> subq_1_node_2;
     }
-    subq_1_node_2 -> subq_0_node_1 [color=purple, style=bold, label="set of values"];
-    subq_0_node_3 [label="SELECT AVG(amount)", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_0 -> subq_0_node_1 [color=black];
-    subq_0_node_1 -> subq_0_node_3 [color=black];
+    subq_1_node_2 -> subq_0_node_2 [label="value list"];
   }
-  subq_0_node_3 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
-
-  // Schema transformation edges
-  node_0 -> node_1 [color=black, label="schema change"];
-  node_1 -> node_3 [color=black, label="schema change"];
+  subq_0_node_4 -> node_1 [label="scalar value"];
 }

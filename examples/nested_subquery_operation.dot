@@ -14,8 +14,9 @@ digraph sqloflow {
     fillcolor=lavender;
     color=purple;
     subq_0_node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_1 [label="WHERE customer_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
-    subgraph cluster_subq_0_node_2 {
+    subq_0_node_1 [label="amount", fillcolor=lightcoral, style="filled,rounded", shape=ellipse];
+    subq_0_node_2 [label="WHERE customer_id IN expr", fillcolor=lightyellow, style="filled,rounded"];
+    subgraph cluster_subq_0_node_3 {
       label="Subquery (in)";
       style=filled;
       fillcolor=lavender;
@@ -26,12 +27,13 @@ digraph sqloflow {
       subq_1_node_0 -> subq_1_node_1 [color=black];
       subq_1_node_1 -> subq_1_node_2 [color=black];
     }
-    subq_1_node_2 -> subq_0_node_1 [color=purple, style=bold, label="set of values"];
-    subq_0_node_3 [label="SELECT AVG(amount)", fillcolor=lightgreen, style="filled,rounded"];
-    subq_0_node_0 -> subq_0_node_1 [color=black];
-    subq_0_node_1 -> subq_0_node_3 [color=black];
+    subq_1_node_2 -> subq_0_node_2 [color=purple, style=bold, label="set of values"];
+    subq_0_node_4 [label="SELECT AVG(amount)", fillcolor=lightgreen, style="filled,rounded"];
+    subq_0_node_0 -> subq_0_node_1 [color=green, style=dotted];
+    subq_0_node_0 -> subq_0_node_2 [color=black];
+    subq_0_node_2 -> subq_0_node_4 [color=black];
   }
-  subq_0_node_3 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
+  subq_0_node_4 -> node_1 [color=purple, style=bold, label="1 row, 1 col"];
 
   // Edges
   node_0 -> node_1 [color=black];

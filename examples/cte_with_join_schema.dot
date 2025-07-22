@@ -1,72 +1,35 @@
-digraph sqloflow {
+digraph schema_flow {
   rankdir=LR;
-  node [shape=box, style=rounded];
+  node [shape=record];
 
-  // Schema view with snapshots
-  subgraph cluster_0 {
-    label="Schema Snapshot 1";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: orders
-    node_0 [label="FROM orders", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_1 {
-    label="Schema Snapshot 2";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: orders
-    node_1 [label="WHERE created_at >= CURRENT_DATE() - INTERVAL '30 days'", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_2 {
-    label="Schema Snapshot 3";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _grouped
-    node_2 [label="GROUP BY customer_id", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_3 {
-    label="Schema Snapshot 4";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_3 [label="SELECT customer_id, MAX(total_amount) AS max_total", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  node_4 [label="CTE: recent_max", fillcolor=lightblue, style="filled,rounded"];
-  subgraph cluster_4 {
-    label="Schema Snapshot 5";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result, o
-    node_5 [label="FROM orders AS o", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_5 {
-    label="Schema Snapshot 6";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result, o, r
-    node_6 [label="INNER JOIN INNER JOIN recent_max AS r ON r.customer_id = o.customer_id", fillcolor=lightgreen, style="filled,rounded"];
-  }
-  subgraph cluster_6 {
-    label="Schema Snapshot 7";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result, o, r
-    node_7 [label="WHERE o.total_amount = r.max_total", fillcolor=lightyellow, style="filled,rounded"];
-  }
-  subgraph cluster_7 {
-    label="Schema Snapshot 8";
-    style=filled;
-    fillcolor=lightgray;
-    // Relations: _result
-    node_8 [label="SELECT o.id, o.total_amount", fillcolor=lightgreen, style="filled,rounded"];
-  }
+  // Source tables
+  node_0 [label="FROM orders|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
+  node_5 [label="FROM orders AS o|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
 
-  // Schema transformation edges
-  node_0 -> node_1 [color=black, label="schema change"];
-  node_1 -> node_2 [color=black, label="schema change"];
-  node_2 -> node_3 [color=black, label="schema change"];
-  node_3 -> node_4 [color=green, style=dotted];
-  node_5 -> node_6 [color=black, label="schema change"];
-  node_6 -> node_7 [color=black, label="schema change"];
-  node_7 -> node_8 [color=black, label="schema change"];
+  // Operations
+
+  subgraph cluster_node_4 {
+    label="CTE: recent_max";
+    style=filled;
+    color=lightblue;
+    node [style=filled,color=white];
+    node_3 [label="SELECT|customer_id\nMAX(total_amount) AS max_total", style=filled, fillcolor=lightyellow];
+    node_2 [label="GROUP BY|customer_id", style=filled, fillcolor=lightyellow];
+    node_1 [label="WHERE|created_at \>= CURRENT_DATE() - INTERVAL '30 days'", style=filled, fillcolor=lightyellow];
+    node_0 [label="FROM orders|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
+    node_0 -> node_1;
+    node_1 -> node_2;
+    node_2 -> node_3;
+  }
+  node_7 [label="WHERE|o.total_amount = r.max_total", style=filled, fillcolor=lightyellow];
+  node_8 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_6 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id", style=filled, fillcolor=lightyellow];
+  node_5 -> node_6;
+  node_3 -> node_6;
+  node_6 -> node_7;
+  node_7 -> node_8;
 }

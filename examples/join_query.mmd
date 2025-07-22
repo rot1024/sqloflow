@@ -1,6 +1,6 @@
 flowchart LR
     node_0[FROM users AS u]
-    node_1["INNER JOIN INNER JOIN orders AS o ON u.id = o.user_id"]
+    node_1["INNER JOIN orders AS o ON u.id = o.user_id"]
     node_2["WHERE o.total &gt; 100"]
     node_3["SELECT u.name, o.total"]
     node_4["ORDER BY o.total DESC"]

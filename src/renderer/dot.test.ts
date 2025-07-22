@@ -74,7 +74,7 @@ describe('renderDot', () => {
   });
 
   describe('schema view', () => {
-    it('should render snapshots as clusters', () => {
+    it('should render enhanced schema view with table and operation nodes', () => {
       const graph: Graph = {
         nodes: [
           { id: 'n1', kind: 'relation', label: 'users' },
@@ -103,17 +103,18 @@ describe('renderDot', () => {
 
       const result = renderDot(graph, 'schema');
       
-      expect(result).toContain('subgraph cluster_0');
-      expect(result).toContain('label="Schema Snapshot 1"');
-      expect(result).toContain('// Relations: users');
-      expect(result).toContain('fillcolor=lightgray');
+      // Enhanced schema view shows tables and operations
+      expect(result).toContain('digraph schema_flow');
+      expect(result).toContain('FROM users');
+      expect(result).toContain('fillcolor=lightgreen'); // table color
+      expect(result).toContain('fillcolor=lightyellow'); // operation color
     });
 
-    it('should indicate schema changes on edges', () => {
+    it('should show operations and data flow', () => {
       const graph: Graph = {
         nodes: [
-          { id: 'n1', kind: 'op', label: 'scan' },
-          { id: 'n2', kind: 'op', label: 'transform' }
+          { id: 'n1', kind: 'op', label: 'FROM', sql: 'FROM users' },
+          { id: 'n2', kind: 'op', label: 'WHERE', sql: 'status = active' }
         ],
         edges: [
           { id: 'e1', from: { node: 'n1' }, to: { node: 'n2' }, kind: 'flow' }
@@ -145,7 +146,9 @@ describe('renderDot', () => {
 
       const result = renderDot(graph, 'schema');
       
-      expect(result).toContain('n1 -> n2 [color=black, label="schema change"]');
+      // Enhanced schema view focuses on operations and data flow
+      expect(result).toContain('WHERE|status = active');
+      expect(result).toContain('n1 -> n2');
     });
 
     it('should handle nodes without snapshots', () => {
@@ -169,11 +172,9 @@ describe('renderDot', () => {
 
       const result = renderDot(graph, 'schema');
       
-      // n1 should not be in a cluster
-      expect(result).toMatch(/^[^}]*n1 \[label="users"[^}]*\];$/m);
-      // n2 should be in a cluster
-      expect(result).toContain('subgraph cluster_0');
-      expect(result).toMatch(/cluster_0 \{[^}]*n2 \[label="scan"[^}]*\]/s);
+      // Enhanced schema view renders all nodes
+      expect(result).toContain('n2 [label="scan"');
+      expect(result).toContain('digraph schema_flow');
     });
   });
 

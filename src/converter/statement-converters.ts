@@ -39,6 +39,7 @@ import {
   applySelectTransformation,
   applyGroupByTransformation,
   applyJoinTransformation,
+  applyUnionTransformation,
   inferColumnsFromExpression
 } from './schema-transformations.js';
 import { convertSubquery } from './subquery-converter.js';
@@ -204,10 +205,11 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
       edges.push(createEdge(ctx, 'flow', secondSelectLastNode.id, unionNode.id));
     }
 
-    // Create result node after UNION
-    const resultNode = createNode(ctx, 'op', 'Result', 'Result');
-    nodes.push(resultNode);
-    edges.push(createEdge(ctx, 'flow', unionNode.id, resultNode.id));
+    // Track the UNION node as the last node
+    lastNodeId = unionNode.id;
+    
+    // Apply UNION transformation to merge schemas
+    applyUnionTransformation(ctx, unionNode.id);
   }
 
   return { nodes, edges };
@@ -228,6 +230,12 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
       const fromNode = createNode(ctx, 'op', 'FROM', `FROM ${getTableLabel(table)}`);
       nodes.push(fromNode);
       rootNodeId = fromNode.id;
+      
+      // Check if this is a CTE reference
+      if (ctx.cteNodes && ctx.cteNodes[tableName]) {
+        // Connect the CTE node to this FROM node
+        edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], fromNode.id));
+      }
 
       // Add column nodes if schema is available
       if (ctx.schema.tables[tableName]) {
@@ -240,13 +248,24 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
           // Add defines edge from FROM node to column
           edges.push(createEdge(ctx, 'defines', fromNode.id, columnNode.id));
         }
+      } else if (ctx.currentSchema[tableName]) {
+        // Check if it's a CTE
+        const cteSchema = ctx.currentSchema[tableName];
+        for (const column of cteSchema.columns) {
+          const columnNode = createNode(ctx, 'column', column.name, column.type || 'unknown');
+          columnNode.parent = fromNode.id;
+          nodes.push(columnNode);
+
+          // Add defines edge from FROM node to column
+          edges.push(createEdge(ctx, 'defines', fromNode.id, columnNode.id));
+        }
       }
 
       // Initialize schema with first table (even if unknown)
       if (!ctx.schema.tables[tableName]) {
         // Table not in schema, create minimal entry
         ctx.currentSchema[tableAlias] = {
-          name: tableAlias,
+          name: tableName,
           columns: [] // Will be inferred from usage
         };
       }
@@ -263,6 +282,12 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         // Only connect from the previous node (no separate table node)
         edges.push(createEdge(ctx, 'flow', rootNodeId, joinNode.id));
         rootNodeId = joinNode.id;
+        
+        // Check if this is a CTE reference
+        if (ctx.cteNodes && ctx.cteNodes[tableName]) {
+          // Connect the CTE node to this JOIN node
+          edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], joinNode.id));
+        }
 
         // Add column nodes for joined table if schema is available
         if (ctx.schema.tables[tableName]) {
@@ -275,12 +300,23 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
             // Add defines edge from JOIN node to column
             edges.push(createEdge(ctx, 'defines', joinNode.id, columnNode.id));
           }
+        } else if (ctx.currentSchema[tableName]) {
+          // Check if it's a CTE
+          const cteSchema = ctx.currentSchema[tableName];
+          for (const column of cteSchema.columns) {
+            const columnNode = createNode(ctx, 'column', column.name, column.type || 'unknown');
+            columnNode.parent = joinNode.id;
+            nodes.push(columnNode);
+
+            // Add defines edge from JOIN node to column
+            edges.push(createEdge(ctx, 'defines', joinNode.id, columnNode.id));
+          }
         }
 
         // Ensure table exists in current schema before JOIN
         if (!ctx.schema.tables[tableName]) {
           ctx.currentSchema[tableAlias] = {
-            name: tableAlias,
+            name: tableName,
             columns: [] // Will be inferred from usage
           };
         }
@@ -326,6 +362,38 @@ const convertCTE = (ctx: ConversionContext, cte: With): { nodes: Node[]; edges: 
     if (cteResult.nodes.length > 0) {
       const lastNode = cteResult.nodes[cteResult.nodes.length - 1];
       edges.push(createEdge(ctx, 'defines', lastNode.id, cteNode.id));
+    }
+    
+    // Track the CTE node for later reference
+    if (ctx.cteNodes) {
+      ctx.cteNodes[cteName] = cteNode.id;
+    }
+    
+    // Add CTE to current schema with the output columns from the SELECT
+    if (cteResult.nodes.length > 0) {
+      // Find the SELECT node to get output columns
+      const selectNode = cteResult.nodes.find(n => n.label.startsWith('SELECT'));
+      if (selectNode && selectNode.sql) {
+        // Parse columns from SELECT
+        const columnsMatch = selectNode.sql.match(/SELECT\s+(.+?)(?:\s+FROM|$)/i);
+        if (columnsMatch) {
+          const columnsList = columnsMatch[1].split(',').map(c => {
+            const parts = c.trim().split(/\s+AS\s+/i);
+            const name = parts[1] || parts[0].split('.').pop() || parts[0];
+            return {
+              id: `${cteName}.${name.trim()}`,
+              name: name.trim(),
+              type: 'unknown',
+              source: cteName
+            };
+          });
+          
+          ctx.currentSchema[cteName] = {
+            name: cteName,
+            columns: columnsList
+          };
+        }
+      }
     }
   }
 
