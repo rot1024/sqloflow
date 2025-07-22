@@ -9,6 +9,6 @@
     "declarationMap": false,
     "sourceMap": true
   },
-  "include": ["src/cli.ts"],
+  "include": ["src/cli.ts", "src/performance/**/*.ts"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }
