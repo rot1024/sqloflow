@@ -6,6 +6,7 @@ import {
   type TableInfo
 } from './utils/schema-inference.js';
 import { formatWhereExpression } from './utils/expression-formatter.js';
+import { buildNodeSchemas } from './utils/node-schemas.js';
 
 interface Position {
   x: number;
@@ -32,41 +33,8 @@ export const renderAscii = (graph: Graph): string => {
   // Infer schema information from the flattened graph
   const { tables, tableAliases } = inferSchemaFromGraph(flatGraph);
   
-  // Build node schemas map for display
-  const nodeSchemas = new Map<string, string[]>();
-  
-  // Process nodes to populate nodeSchemas based on their operation type
-  flatGraph.nodes.forEach(node => {
-    if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
-      // For FROM nodes, show all columns from the table
-      const aliasInfo = node.sql.match(/FROM\s+(\w+)(?:\s+AS\s+(\w+))?/i);
-      if (aliasInfo) {
-        const tableName = aliasInfo[1];
-        const table = tables.get(tableName);
-        if (table && table.columns.length > 0) {
-          nodeSchemas.set(node.id, table.columns.map(col => `${tableName}.${col}`));
-        }
-      }
-    }
-  });
-  
-  // Also use snapshots for nodes where we have them
-  if (flatGraph.snapshots) {
-    flatGraph.snapshots.forEach(snapshot => {
-      const stepNode = flatGraph.nodes.find(n => n.id === snapshot.nodeId);
-      if (stepNode && snapshot.schema) {
-        const columns: string[] = [];
-        snapshot.schema.columns.forEach(col => {
-          const qualifiedName = col.source ? `${col.source}.${col.name}` : col.name;
-          columns.push(qualifiedName);
-        });
-        if (columns.length > 0) {
-          // Override with snapshot data if available
-          nodeSchemas.set(stepNode.id, columns);
-        }
-      }
-    });
-  }
+  // Build node schemas map for display using the shared utility
+  const nodeSchemas = buildNodeSchemas(flatGraph, tables);
   
   // Simple left-to-right layout
   const layout = calculateLayout(flatGraph, nodeSchemas, tables, tableAliases);

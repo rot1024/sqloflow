@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatWhereExpression,
-  formatWhereExpressionMermaid,
-  formatWhereExpressionDot
+  formatWhereExpression
 } from './expression-formatter.js';
 
 describe('Expression Formatter', () => {
@@ -104,29 +102,5 @@ describe('Expression Formatter', () => {
       );
     });
 
-  });
-
-  describe('formatWhereExpressionMermaid', () => {
-    it('should convert newlines to <br/> for Mermaid', () => {
-      const expr = 'status = "active" AND created_at > "2023-01-01"';
-      const formatted = formatWhereExpressionMermaid(expr);
-      expect(formatted).toBe(
-        'status = "active"<br/>' +
-        'AND<br/>' +
-        'created_at > "2023-01-01"'
-      );
-    });
-  });
-
-  describe('formatWhereExpressionDot', () => {
-    it('should convert newlines to \\l for DOT', () => {
-      const expr = 'status = "active" AND created_at > "2023-01-01"';
-      const formatted = formatWhereExpressionDot(expr);
-      expect(formatted).toBe(
-        'status = "active"\\l' +
-        'AND\\l' +
-        'created_at > "2023-01-01"'
-      );
-    });
   });
 });

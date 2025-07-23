@@ -18,7 +18,13 @@ import {
   getJoinColumns,
   type TableInfo
 } from './utils/schema-inference.js';
-import { formatWhereExpressionDot, formatWhereExpressionDotHtml } from './utils/expression-formatter.js';
+import { buildNodeSchemas, extractSelectColumns } from './utils/node-schemas.js';
+import { 
+  extractCTENodes, 
+  findCTERelatedNodes, 
+  getCTEInternalEdges,
+  findLastCTENode
+} from './utils/cte.js';
 
 interface OperationNode {
   id: string;
@@ -79,7 +85,7 @@ export const renderDot = (graph: Graph): string => {
       if (node.label === 'SELECT') {
         // Extract columns from SQL if available
         if (node.sql) {
-          const columns = extractColumnsFromSelectSQL(node.sql);
+          const columns = extractSelectColumns(node.sql);
           operation.outputColumns = columns;
         }
       }
@@ -105,17 +111,9 @@ export const renderDot = (graph: Graph): string => {
     }
   });
 
-  // Track CTE nodes and their associated nodes
-  const cteNodes = new Map<string, string>(); // CTE node ID -> CTE name
+  // Track CTE nodes and their associated nodes using the shared utility
+  const cteNodes = extractCTENodes(graph);
   const processedNodes = new Set<string>();
-
-  // First pass: identify CTE nodes
-  graph.nodes.forEach(node => {
-    if (node.kind === 'relation' && node.label.startsWith('CTE:')) {
-      const cteName = node.label.replace('CTE: ', '');
-      cteNodes.set(node.id, cteName);
-    }
-  });
 
   // Render table nodes (replacing FROM nodes)
   lines.push('  // Source tables');
@@ -193,28 +191,12 @@ export const renderDot = (graph: Graph): string => {
 
   // Render CTEs as subgraphs
   cteNodes.forEach((cteName, cteNodeId) => {
-    // Find all nodes that lead to this CTE node
-    const cteSubgraphNodes = new Set<string>();
-
-    // Traverse backwards from the CTE node to find all nodes in the CTE
-    const findCTENodes = (nodeId: string) => {
-      if (cteSubgraphNodes.has(nodeId)) return;
-      cteSubgraphNodes.add(nodeId);
-
-      // Find edges that lead to this node
-      graph.edges.forEach(edge => {
-        if (edge.to.node === nodeId && edge.kind === 'flow') {
-          findCTENodes(edge.from.node);
-        }
-      });
-    };
-
-    // Start from edges that define the CTE
-    graph.edges.forEach(edge => {
-      if (edge.to.node === cteNodeId && edge.kind === 'defines') {
-        findCTENodes(edge.from.node);
-      }
-    });
+    // Find nodes related to the CTE using the shared utility
+    const cteNode = graph.nodes.find(n => n.id === cteNodeId);
+    if (!cteNode) return;
+    
+    const cteRelatedNodes = findCTERelatedNodes(graph, cteNode);
+    const cteSubgraphNodes = new Set(cteRelatedNodes.map(n => n.id));
 
     // Render CTE as subgraph
     if (cteSubgraphNodes.size > 0) {
@@ -258,13 +240,11 @@ export const renderDot = (graph: Graph): string => {
 
             // Add SQL parameter if available (except for UNION operations)
             if (op.sql && !op.operation.includes('UNION')) {
-              // For SELECT, split columns by comma for better readability
+              // For SELECT, use the shared utility to extract columns
               if (op.operation === 'SELECT') {
-                const selectItems = op.sql.split(',').map(item => {
-                  // Remove surrounding quotes from string literals
-                  return item.trim().replace(/^'([^']*)'(\s+AS\s+)/i, '$1$2');
-                }).join('\\n');
-                labelParts.push(selectItems);
+                const selectItems = extractSelectColumns(op.sql);
+                const selectItemsStr = selectItems.join('\\n');
+                labelParts.push(selectItemsStr);
               } else {
                 labelParts.push(op.sql);
               }
@@ -284,11 +264,10 @@ export const renderDot = (graph: Graph): string => {
         }
       });
 
-      // Render edges within the CTE
-      graph.edges.forEach(edge => {
-        if (cteSubgraphNodes.has(edge.from.node) && cteSubgraphNodes.has(edge.to.node) && edge.kind === 'flow') {
-          lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)};`);
-        }
+      // Render edges within the CTE using the shared utility
+      const cteInternalEdges = getCTEInternalEdges(graph, cteRelatedNodes);
+      cteInternalEdges.forEach(edge => {
+        lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)};`);
       });
 
       lines.push('  }');
@@ -324,13 +303,11 @@ export const renderDot = (graph: Graph): string => {
 
     // Add SQL parameter if available (except for UNION operations)
     if (op.sql && !op.operation.includes('UNION')) {
-      // For SELECT, split columns by comma for better readability
+      // For SELECT, use the shared utility to extract columns
       if (op.operation === 'SELECT') {
-        const selectItems = op.sql.split(',').map(item => {
-          // Remove surrounding quotes from string literals
-          return item.trim().replace(/^'([^']*)'(\s+AS\s+)/i, '$1$2');
-        }).join('\\n');
-        labelParts.push(selectItems);
+        const selectItems = extractSelectColumns(op.sql);
+        const selectItemsStr = selectItems.join('\\n');
+        labelParts.push(selectItemsStr);
       } else {
         labelParts.push(op.sql);
       }
@@ -425,15 +402,8 @@ export const renderDot = (graph: Graph): string => {
 
       // Handle CTE connections specially
       if (fromInCTE) {
-        // Find the last node in the CTE subgraph to connect from
-        let lastCTENode: string | null = null;
-
-        // Find the node that has an edge TO the CTE node with 'defines' kind
-        graph.edges.forEach(e => {
-          if (e.to.node === fromCTEId && e.kind === 'defines') {
-            lastCTENode = e.from.node;
-          }
-        });
+        // Find the last node in the CTE subgraph to connect from using the shared utility
+        const lastCTENode = findLastCTENode(graph, fromCTEId);
 
         if (lastCTENode) {
           lines.push(`  ${escapeId(lastCTENode)} -> ${escapeId(edge.to.node)};`);
@@ -624,39 +594,6 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function extractColumnsFromSelectSQL(sql: string): string[] {
-  // Simple extraction - in real implementation, we'd parse the SQL properly
-  if (sql === '*') return ['*'];
-
-  // Try to extract column names from SELECT list
-  const columns: string[] = [];
-  const parts = sql.split(',').map(s => s.trim());
-
-  parts.forEach(part => {
-    // Handle "column AS alias" pattern
-    const asMatch = part.match(/(.+?)\s+AS\s+(\w+)/i);
-    if (asMatch) {
-      let expression = asMatch[1].trim();
-      // Remove quotes from string literals
-      if ((expression.startsWith("'") && expression.endsWith("'")) ||
-          (expression.startsWith('"') && expression.endsWith('"'))) {
-        expression = expression.slice(1, -1);
-      }
-      // Show the full expression with AS clause
-      columns.push(`${expression} AS ${asMatch[2]}`);
-    } else {
-      // For simple columns, remove quotes if it's a string literal
-      let cleaned = part;
-      if ((cleaned.startsWith("'") && cleaned.endsWith("'")) ||
-          (cleaned.startsWith('"') && cleaned.endsWith('"'))) {
-        cleaned = cleaned.slice(1, -1);
-      }
-      columns.push(cleaned);
-    }
-  });
-
-  return columns;
-}
 
 
 

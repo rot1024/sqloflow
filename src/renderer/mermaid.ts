@@ -5,7 +5,15 @@ import {
   getJoinColumns,
   type TableInfo
 } from './utils/schema-inference.js';
-import { formatWhereExpressionMermaid } from './utils/expression-formatter.js';
+import { formatWhereExpression } from './utils/expression-formatter.js';
+import { buildNodeSchemas, extractSelectColumns } from './utils/node-schemas.js';
+import { 
+  extractCTENodes, 
+  findCTERelatedNodes, 
+  isCTERelatedNode,
+  getCTEInternalEdges,
+  processCTEConnections
+} from './utils/cte.js';
 
 export const renderMermaid = (graph: Graph): string => {
   const lines: string[] = ['flowchart LR'];
@@ -13,43 +21,11 @@ export const renderMermaid = (graph: Graph): string => {
   // Infer schema information from the graph
   const { tables, tableAliases } = inferSchemaFromGraph(graph);
 
-  // Build node schemas map for display
-  const nodeSchemas = new Map<string, string[]>();
+  // Build node schemas map for display using the shared utility
+  const nodeSchemas = buildNodeSchemas(graph, tables);
 
-  // Process nodes to populate nodeSchemas based on their operation type
-  graph.nodes.forEach(node => {
-    if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
-      // For FROM nodes, show all columns from the table
-      const aliasInfo = node.sql.match(/FROM\s+(\w+)(?:\s+AS\s+(\w+))?/i);
-      if (aliasInfo) {
-        const tableName = aliasInfo[1];
-        const table = tables.get(tableName);
-        if (table && table.columns.length > 0) {
-          nodeSchemas.set(node.id, table.columns.map(col => `${tableName}.${col}`));
-        }
-      }
-    }
-  });
-
-  // Also use snapshots for nodes where we have them
-  if (graph.snapshots) {
-    graph.snapshots.forEach(snapshot => {
-      const stepNode = graph.nodes.find(n => n.id === snapshot.nodeId);
-      if (stepNode && snapshot.schema) {
-        const columns: string[] = [];
-        snapshot.schema.columns.forEach(col => {
-          const qualifiedName = col.source ? `${col.source}.${col.name}` : col.name;
-          columns.push(qualifiedName);
-        });
-        if (columns.length > 0) {
-          // Override with snapshot data if available
-          nodeSchemas.set(stepNode.id, columns);
-        }
-      }
-    });
-  }
-
-  // Group nodes (e.g., CTEs)
+  // Extract CTE nodes using the shared utility
+  const cteNodesMap = extractCTENodes(graph);
   const cteNodes = graph.nodes.filter(n => n.label.startsWith('CTE:'));
   const mainNodes = graph.nodes.filter(n => !n.label.startsWith('CTE:'));
 
@@ -64,19 +40,16 @@ export const renderMermaid = (graph: Graph): string => {
     lines.push(`    subgraph cte_${sanitizeId(cteName)} [CTE: ${cteName}]`);
     lines.push('        direction TB');
 
-    // Collect nodes related to the CTE
-    const cteRelatedNodes = findCteRelatedNodes(graph, cteNode);
+    // Collect nodes related to the CTE using the shared utility
+    const cteRelatedNodes = findCTERelatedNodes(graph, cteNode);
 
     // Render CTE nodes
     for (const node of cteRelatedNodes) {
       lines.push(`        ${formatNode(node, nodeSchemas, graph, tables, tableAliases)}`);
     }
 
-    // Render edges within the CTE
-    const cteEdges = graph.edges.filter(edge =>
-      cteRelatedNodes.some(n => n.id === edge.from.node) &&
-      cteRelatedNodes.some(n => n.id === edge.to.node)
-    );
+    // Render edges within the CTE using the shared utility
+    const cteEdges = getCTEInternalEdges(graph, cteRelatedNodes);
 
     for (const edge of cteEdges) {
       lines.push(`        ${formatEdge(edge, graph)}`);
@@ -94,7 +67,7 @@ export const renderMermaid = (graph: Graph): string => {
 
   // Render main query nodes and subqueries
   for (const node of mainNodes) {
-    if (!isCteRelatedNode(graph, node, cteNodes) && !cteResultNodes.has(node.id)) {
+    if (!isCTERelatedNode(graph, node, cteNodes) && !cteResultNodes.has(node.id)) {
       if (node.kind === 'subquery') {
         // Render subquery as subgraph
         lines.push(...renderSubquery(node as SubqueryNode, graph, nodeSchemas, tables, tableAliases));
@@ -120,24 +93,14 @@ export const renderMermaid = (graph: Graph): string => {
     }
 
     // At least one side is a main query node
-    return (fromNode && !isCteRelatedNode(graph, fromNode, cteNodes)) ||
-           (toNode && !isCteRelatedNode(graph, toNode, cteNodes));
+    return (fromNode && !isCTERelatedNode(graph, fromNode, cteNodes)) ||
+           (toNode && !isCTERelatedNode(graph, toNode, cteNodes));
   });
 
-  // Handle CTE connections - find edges that go through CTE result nodes
-  for (const cteNode of cteNodes) {
-    // Find the last node in the CTE (the one that connects to the CTE result node)
-    const definesEdge = graph.edges.find(e => e.kind === 'defines' && e.to.node === cteNode.id);
-    if (definesEdge) {
-      const lastCteNode = definesEdge.from.node;
-      
-      // Find edges from CTE result node to other nodes
-      const outgoingEdges = graph.edges.filter(e => e.from.node === cteNode.id);
-      for (const outEdge of outgoingEdges) {
-        // Create direct connection from last CTE node to the target
-        lines.push(`    ${sanitizeId(lastCteNode)} --> ${sanitizeId(outEdge.to.node)}`);
-      }
-    }
+  // Handle CTE connections using the shared utility
+  const cteConnections = processCTEConnections(graph, cteNodesMap);
+  for (const connection of cteConnections) {
+    lines.push(`    ${sanitizeId(connection.from)} --> ${sanitizeId(connection.to)}`);
   }
 
   for (const edge of mainEdges) {
@@ -182,8 +145,8 @@ const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph
 
     if (node.kind === 'op' && node.label === 'SELECT' && node.sql) {
       // For SELECT nodes, show the SQL expressions formatted on separate lines
-      const selectItems = node.sql.split(',').map(item => escapeLabel(item.trim()));
-      return `${nodeId}["${label}<br/>---<br/>${selectItems.join('<br/>')}"]`;
+      const selectItems = extractSelectColumns(node.sql);
+      return `${nodeId}["${label}<br/>---<br/>${selectItems.map(item => escapeLabel(item)).join('<br/>')}"]`;
     } else if (node.kind === 'op' && node.label === 'GROUP BY') {
       // For GROUP BY, show operation and columns
       return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
@@ -203,10 +166,11 @@ const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph
   if (node.sql && node.kind === 'clause') {
     // Format WHERE expressions with line breaks for AND/OR
     if (node.label === 'WHERE') {
-      // Use original SQL, not escaped version
-      const formattedSql = formatWhereExpressionMermaid(node.sql);
-      // Escape after formatting
-      const escapedSql = escapeLabel(formattedSql);
+      // Format WHERE expressions with line breaks for AND/OR
+      const formattedSql = formatWhereExpression(node.sql);
+      // In Mermaid, use <br/> for line breaks and escape after formatting
+      const mermaidSql = formattedSql.replace(/\n/g, '<br/>');
+      const escapedSql = escapeLabel(mermaidSql);
       return `${nodeId}["${label}<br/>---<br/>${escapedSql}"]`;
     }
     return `${nodeId}["${label}<br/>---<br/>${sql}"]`;
@@ -297,56 +261,6 @@ const escapeLabel = (label: string): string => {
     .replace(/\|/g, '&#124;');
 };
 
-const findCteRelatedNodes = (graph: Graph, cteNode: Node): Node[] => {
-  const related: Node[] = [];
-  const visited = new Set<string>();
-
-  // Traverse backward from nodes with defines edges to CTEs
-  const definesEdge = graph.edges.find(e =>
-    e.kind === 'defines' && e.to.node === cteNode.id
-  );
-
-  if (definesEdge) {
-    collectRelatedNodes(graph, definesEdge.from.node, related, visited, cteNode.id);
-  }
-
-  return related;
-};
-
-const collectRelatedNodes = (
-  graph: Graph,
-  nodeId: string,
-  collected: Node[],
-  visited: Set<string>,
-  stopAtNodeId: string
-): void => {
-  if (visited.has(nodeId) || nodeId === stopAtNodeId) return;
-  visited.add(nodeId);
-
-  const node = graph.nodes.find(n => n.id === nodeId);
-  if (node) {
-    collected.push(node);
-  }
-
-  // Find input edges to this node
-  const incomingEdges = graph.edges.filter(e =>
-    e.to.node === nodeId && e.kind === 'flow'
-  );
-
-  for (const edge of incomingEdges) {
-    collectRelatedNodes(graph, edge.from.node, collected, visited, stopAtNodeId);
-  }
-};
-
-const isCteRelatedNode = (graph: Graph, node: Node, cteNodes: Node[]): boolean => {
-  for (const cteNode of cteNodes) {
-    const related = findCteRelatedNodes(graph, cteNode);
-    if (related.some(n => n.id === node.id)) {
-      return true;
-    }
-  }
-  return false;
-};
 
 const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph, nodeSchemas: Map<string, string[]>, tables: Map<string, TableInfo>, tableAliases: Map<string, string>): string[] => {
   const lines: string[] = [];
