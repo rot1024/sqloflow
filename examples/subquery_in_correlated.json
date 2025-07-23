@@ -107,67 +107,42 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "p": {
-          "name": "products",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "p": {
-          "name": "products",
-          "columns": [
-            {
-              "id": "p.category_id",
-              "name": "category_id",
-              "source": "p"
-            },
-            {
-              "id": "p.launch_date",
-              "name": "launch_date",
-              "source": "p"
-            }
-          ]
-        },
-        "c": {
-          "name": "categories",
-          "columns": [
-            {
-              "id": "c.status",
-              "name": "status",
-              "source": "c"
-            },
-            {
-              "id": "c.created_date",
-              "name": "created_date",
-              "source": "c"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.category_id",
+            "name": "category_id",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.p.product_id",
-              "name": "p.product_id",
-              "source": "p"
-            },
-            {
-              "id": "_result.p.name",
-              "name": "p.name",
-              "source": "p"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.product_id",
+            "name": "p.product_id",
+            "source": "p",
+            "table": "products"
+          },
+          {
+            "id": "p.name",
+            "name": "p.name",
+            "source": "p",
+            "table": "products"
+          }
+        ]
       }
     }
   ]

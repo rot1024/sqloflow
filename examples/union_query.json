@@ -75,116 +75,72 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "users": {
-          "name": "users",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.id",
-              "name": "id",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.name",
-              "name": "name",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.source",
-              "name": "source",
-              "source": "_expression"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "id",
+            "name": "id"
+          },
+          {
+            "id": "name",
+            "name": "name"
+          },
+          {
+            "id": "source",
+            "name": "source"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.id",
-              "name": "id",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.name",
-              "name": "name",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.source",
-              "name": "source",
-              "source": "_expression"
-            }
-          ]
-        },
-        "organizations": {
-          "name": "organizations",
-          "columns": []
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_4",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.id",
-              "name": "id",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.name",
-              "name": "name",
-              "source": "_unknown"
-            },
-            {
-              "id": "_result.source",
-              "name": "source",
-              "source": "_expression"
-            }
-          ]
-        }
+      "nodeId": "node_4",
+      "schema": {
+        "columns": [
+          {
+            "id": "id",
+            "name": "id"
+          },
+          {
+            "id": "name",
+            "name": "name"
+          },
+          {
+            "id": "source",
+            "name": "source"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_2",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.id",
-              "name": "id",
-              "source": "_result"
-            },
-            {
-              "id": "_result.name",
-              "name": "name",
-              "source": "_result"
-            },
-            {
-              "id": "_result.source",
-              "name": "source",
-              "source": "_result"
-            }
-          ]
-        }
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "id",
+            "name": "id"
+          },
+          {
+            "id": "name",
+            "name": "name"
+          },
+          {
+            "id": "source",
+            "name": "source"
+          }
+        ]
       }
     }
   ]

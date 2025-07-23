@@ -95,19 +95,29 @@ export function inferSchemaFromGraph(graph: Graph): {
   const tableAliases = new Map<string, string>();
   
   // First, extract schema from snapshots (if available from CREATE TABLE)
-  if (graph.snapshots) {
-    const schemaSnapshot = graph.snapshots.find(s => s.relations && Object.keys(s.relations).length > 0);
-    if (schemaSnapshot?.relations) {
-      Object.entries(schemaSnapshot.relations).forEach(([aliasName, schema]) => {
-        if (!aliasName.startsWith('_')) {
-          const actualTableName = schema.name;
-          tables.set(actualTableName, {
-            id: `table_${actualTableName}`,
-            tableName: actualTableName,
-            columns: schema.columns.map(col => col.name),
-            type: 'source'
-          });
+  if (graph.snapshots && graph.snapshots.length > 0) {
+    // Use the first snapshot which should have the initial schema
+    const schemaSnapshot = graph.snapshots[0];
+    if (schemaSnapshot?.schema) {
+      // Group columns by table
+      const tableColumns = new Map<string, string[]>();
+      schemaSnapshot.schema.columns.forEach(col => {
+        if (col.table) {
+          if (!tableColumns.has(col.table)) {
+            tableColumns.set(col.table, []);
+          }
+          tableColumns.get(col.table)!.push(col.name);
         }
+      });
+      
+      // Create table info for each table
+      tableColumns.forEach((columns, tableName) => {
+        tables.set(tableName, {
+          id: `table_${tableName}`,
+          tableName: tableName,
+          columns: columns,
+          type: 'source'
+        });
       });
     }
   }
@@ -222,8 +232,9 @@ export function getJoinColumns(
     } else if (graph.snapshots) {
       // Check if it's a CTE by looking at snapshots
       for (const snapshot of graph.snapshots) {
-        if (snapshot.relations[tableName]) {
-          snapshot.relations[tableName].columns.forEach(col => {
+        const cteColumns = snapshot.schema.columns.filter(col => col.source === tableName);
+        if (cteColumns.length > 0) {
+          cteColumns.forEach(col => {
             schemaInfo.push(`${tableName}.${col.name}`);
           });
           break;

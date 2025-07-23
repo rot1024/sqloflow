@@ -95,11 +95,14 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
 
   // WHERE clause
   if (stmt.where) {
-    // Infer columns from WHERE expression
-    inferColumnsFromExpression(ctx, stmt.where);
-
     const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where));
     nodes.push(whereNode);
+    
+    // Set current node ID before inferring columns
+    ctx.currentNodeId = whereNode.id;
+    
+    // Infer columns from WHERE expression
+    inferColumnsFromExpression(ctx, stmt.where);
 
     if (lastNodeId) {
       edges.push(createEdge(ctx, 'flow', lastNodeId, whereNode.id));
@@ -128,6 +131,9 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
       edges.push(createEdge(ctx, 'flow', lastNodeId, groupByNode.id));
     }
     lastNodeId = groupByNode.id;
+    
+    // Set current node ID
+    ctx.currentNodeId = groupByNode.id;
 
     // Apply GROUP BY transformation
     applyGroupByTransformation(ctx, groupByNode.id, stmt.groupby);
@@ -152,6 +158,9 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     edges.push(createEdge(ctx, 'flow', lastNodeId, selectNode.id));
   }
   lastNodeId = selectNode.id;
+  
+  // Set current node ID
+  ctx.currentNodeId = selectNode.id;
 
   // Detect subqueries in SELECT columns
   for (const col of stmt.columns) {
@@ -231,43 +240,51 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
       nodes.push(fromNode);
       rootNodeId = fromNode.id;
       
+      // Set current node ID
+      ctx.currentNodeId = fromNode.id;
+      
+      // Track that this node introduced this table alias
+      if (ctx.tableSourceNodes) {
+        ctx.tableSourceNodes[tableAlias] = fromNode.id;
+      }
+      
       // Check if this is a CTE reference
       if (ctx.cteNodes && ctx.cteNodes[tableName]) {
         // Connect the CTE node to this FROM node
         edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], fromNode.id));
       }
 
-      // Add column nodes if schema is available
-      if (ctx.schema.tables[tableName]) {
-        const tableSchema = ctx.schema.tables[tableName];
-        for (const column of tableSchema.columns) {
-          const columnNode = createNode(ctx, 'column', column.name, column.type);
-          columnNode.parent = fromNode.id;
-          nodes.push(columnNode);
+      // Schema information is now tracked via snapshots instead of column nodes
 
-          // Add defines edge from FROM node to column
-          edges.push(createEdge(ctx, 'defines', fromNode.id, columnNode.id));
-        }
-      } else if (ctx.currentSchema[tableName]) {
-        // Check if it's a CTE
-        const cteSchema = ctx.currentSchema[tableName];
-        for (const column of cteSchema.columns) {
-          const columnNode = createNode(ctx, 'column', column.name, column.type || 'unknown');
-          columnNode.parent = fromNode.id;
-          nodes.push(columnNode);
-
-          // Add defines edge from FROM node to column
-          edges.push(createEdge(ctx, 'defines', fromNode.id, columnNode.id));
-        }
-      }
-
-      // Initialize schema with first table (even if unknown)
-      if (!ctx.schema.tables[tableName]) {
-        // Table not in schema, create minimal entry
-        ctx.currentSchema[tableAlias] = {
+      // Initialize columns for the first table
+      if (ctx.currentRelations[tableName]) {
+        // Add columns from known table
+        const relation = ctx.currentRelations[tableName];
+        ctx.currentColumns = relation.columns.map(col => ({
+          ...col,
+          source: tableAlias,
+          id: `${tableAlias}.${col.name}`,
+          table: relation.name,
+          // Preserve existing sourceNodeId if it exists, otherwise set to fromNode.id
+          sourceNodeId: col.sourceNodeId || fromNode.id
+        }));
+      } else if (ctx.cteNodes && ctx.cteNodes[tableName]) {
+        // This is a CTE but we don't have its schema yet
+        // Initialize empty - columns will be inferred
+        ctx.currentRelations[tableAlias] = {
           name: tableName,
-          columns: [] // Will be inferred from usage
+          alias: tableAlias,
+          columns: []
         };
+        ctx.currentColumns = [];
+      } else {
+        // Unknown table - initialize empty
+        ctx.currentRelations[tableAlias] = {
+          name: tableName,
+          alias: tableAlias,
+          columns: []
+        };
+        ctx.currentColumns = [];
       }
 
       // Create initial snapshot with the first table
@@ -283,41 +300,40 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         edges.push(createEdge(ctx, 'flow', rootNodeId, joinNode.id));
         rootNodeId = joinNode.id;
         
+        // Set current node ID
+        ctx.currentNodeId = joinNode.id;
+        
+        // Track that this node introduced this table alias
+        if (ctx.tableSourceNodes) {
+          ctx.tableSourceNodes[tableAlias] = joinNode.id;
+        }
+        
         // Check if this is a CTE reference
         if (ctx.cteNodes && ctx.cteNodes[tableName]) {
           // Connect the CTE node to this JOIN node
           edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], joinNode.id));
         }
 
-        // Add column nodes for joined table if schema is available
-        if (ctx.schema.tables[tableName]) {
-          const tableSchema = ctx.schema.tables[tableName];
-          for (const column of tableSchema.columns) {
-            const columnNode = createNode(ctx, 'column', column.name, column.type);
-            columnNode.parent = joinNode.id;
-            nodes.push(columnNode);
+        // Schema information is now tracked via snapshots instead of column nodes
 
-            // Add defines edge from JOIN node to column
-            edges.push(createEdge(ctx, 'defines', joinNode.id, columnNode.id));
-          }
-        } else if (ctx.currentSchema[tableName]) {
-          // Check if it's a CTE
-          const cteSchema = ctx.currentSchema[tableName];
-          for (const column of cteSchema.columns) {
-            const columnNode = createNode(ctx, 'column', column.name, column.type || 'unknown');
-            columnNode.parent = joinNode.id;
-            nodes.push(columnNode);
-
-            // Add defines edge from JOIN node to column
-            edges.push(createEdge(ctx, 'defines', joinNode.id, columnNode.id));
-          }
-        }
-
-        // Ensure table exists in current schema before JOIN
-        if (!ctx.schema.tables[tableName]) {
-          ctx.currentSchema[tableAlias] = {
+        // Add columns from joined table to current schema
+        if (ctx.currentRelations[tableName]) {
+          const relation = ctx.currentRelations[tableName];
+          const newColumns = relation.columns.map(col => ({
+            ...col,
+            source: tableAlias,
+            id: `${tableAlias}.${col.name}`,
+            table: relation.name,
+            // Preserve existing sourceNodeId if it exists, otherwise set to joinNode.id
+            sourceNodeId: col.sourceNodeId || joinNode.id
+          }));
+          ctx.currentColumns.push(...newColumns);
+        } else {
+          // Unknown table
+          ctx.currentRelations[tableAlias] = {
             name: tableName,
-            columns: [] // Will be inferred from usage
+            alias: tableAlias,
+            columns: []
           };
         }
 
@@ -327,7 +343,7 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         }
 
         // Apply JOIN transformation - merge all available relations
-        applyJoinTransformation(ctx, joinNode.id, Object.keys(ctx.currentSchema));
+        applyJoinTransformation(ctx, joinNode.id, Object.keys(ctx.currentRelations));
       } else {
         // Handle other FROM types (TableExpr, etc.)
         const fromNode = createNode(ctx, 'op', 'FROM', `FROM ${getTableLabel(table)}`);
@@ -371,28 +387,27 @@ const convertCTE = (ctx: ConversionContext, cte: With): { nodes: Node[]; edges: 
     
     // Add CTE to current schema with the output columns from the SELECT
     if (cteResult.nodes.length > 0) {
-      // Find the SELECT node to get output columns
-      const selectNode = cteResult.nodes.find(n => n.label.startsWith('SELECT'));
-      if (selectNode && selectNode.sql) {
-        // Parse columns from SELECT
-        const columnsMatch = selectNode.sql.match(/SELECT\s+(.+?)(?:\s+FROM|$)/i);
-        if (columnsMatch) {
-          const columnsList = columnsMatch[1].split(',').map(c => {
-            const parts = c.trim().split(/\s+AS\s+/i);
-            const name = parts[1] || parts[0].split('.').pop() || parts[0];
-            return {
-              id: `${cteName}.${name.trim()}`,
-              name: name.trim(),
-              type: 'unknown',
-              source: cteName
-            };
-          });
-          
-          ctx.currentSchema[cteName] = {
-            name: cteName,
-            columns: columnsList
-          };
-        }
+      // Get the columns from the last snapshot of the CTE
+      const lastNode = cteResult.nodes[cteResult.nodes.length - 1];
+      const lastSnapshot = ctx.snapshots.find(s => s.nodeId === lastNode.id);
+      
+      if (lastSnapshot) {
+        // Create CTE columns based on the output columns
+        const columnsList = lastSnapshot.schema.columns.map(col => ({
+          id: `${cteName}.${col.name}`,
+          name: col.name,
+          type: col.type,
+          source: cteName,
+          table: cteName,
+          sourceNodeId: cteNode.id
+        }));
+        
+        // Add CTE to current relations
+        ctx.currentRelations[cteName] = {
+          name: cteName,
+          alias: cteName,
+          columns: columnsList
+        };
       }
     }
   }

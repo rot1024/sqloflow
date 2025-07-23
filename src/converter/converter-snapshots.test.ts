@@ -23,36 +23,38 @@ describe('convert with snapshots', () => {
     // Find snapshots by content rather than node ID
     const fromSnapshot = graph.snapshots![0]; // First snapshot after FROM
     expect(fromSnapshot).toBeDefined();
-    expect(fromSnapshot!.relations).toHaveProperty('u');
+    // Without CREATE TABLE, columns will be empty initially
+    expect(fromSnapshot!.schema.columns).toBeDefined();
     
-    // Find JOIN snapshot - should have both u and o relations
+    // Find JOIN snapshot - should have columns from both tables
     const joinSnapshot = graph.snapshots!.find(s => 
-      s.relations['u'] && s.relations['o']
+      s.schema.columns.some(c => c.source === 'u') && 
+      s.schema.columns.some(c => c.source === 'o')
     );
     expect(joinSnapshot).toBeDefined();
     
     // Check that columns were inferred from ON clause
-    const usersRelation = joinSnapshot!.relations['u'];
-    const ordersRelation = joinSnapshot!.relations['o'];
-    expect(usersRelation?.columns.some(c => c.name === 'id')).toBe(true);
-    expect(ordersRelation?.columns.some(c => c.name === 'user_id')).toBe(true);
+    const userColumns = joinSnapshot!.schema.columns.filter(c => c.source === 'u');
+    const orderColumns = joinSnapshot!.schema.columns.filter(c => c.source === 'o');
+    expect(userColumns.some(c => c.name === 'id')).toBe(true);
+    expect(orderColumns.some(c => c.name === 'user_id')).toBe(true);
     
     // Find WHERE snapshot - check if status column was inferred
     const whereSnapshot = graph.snapshots!.find((s, idx) => 
-      idx > 1 && s.relations['o']?.columns.some(c => c.name === 'status')
+      idx > 1 && s.schema.columns.some(c => c.name === 'status' && c.source === 'o')
     );
     expect(whereSnapshot).toBeDefined();
     
     // Check snapshot after GROUP BY
-    const groupBySnapshot = graph.snapshots!.find(s => s.relations['_grouped']);
+    const groupBySnapshot = graph.snapshots!.find((s, idx) => 
+      idx > 2 && s.schema.columns.some(c => c.name === 'name')
+    );
     expect(groupBySnapshot).toBeDefined();
-    expect(groupBySnapshot!.relations['_grouped']).toBeDefined();
     
     // Check final SELECT snapshot
-    const selectSnapshot = graph.snapshots!.find(s => s.relations['_result']);
+    const selectSnapshot = graph.snapshots![graph.snapshots!.length - 1];
     expect(selectSnapshot).toBeDefined();
-    expect(selectSnapshot!.relations['_result']).toBeDefined();
-    expect(selectSnapshot!.relations['_result'].columns).toHaveLength(3);
+    expect(selectSnapshot!.schema.columns).toHaveLength(3);
   });
 
   it('should infer columns from WHERE clause', () => {
@@ -67,13 +69,13 @@ describe('convert with snapshots', () => {
     
     // Find WHERE snapshot that has the inferred columns
     const whereSnapshot = graph.snapshots!.find(s => 
-      s.relations['products']?.columns.some(c => c.name === 'price')
+      s.schema.columns.some(c => c.name === 'price')
     );
     expect(whereSnapshot).toBeDefined();
     
-    const productsColumns = whereSnapshot!.relations['products'].columns;
-    expect(productsColumns.some(c => c.name === 'price')).toBe(true);
-    expect(productsColumns.some(c => c.name === 'category')).toBe(true);
+    const columns = whereSnapshot!.schema.columns;
+    expect(columns.some(c => c.name === 'price')).toBe(true);
+    expect(columns.some(c => c.name === 'category')).toBe(true);
   });
 
   it('should handle CREATE TABLE with snapshots', () => {
@@ -94,13 +96,13 @@ describe('convert with snapshots', () => {
     
     // Initial schema should have users table with columns
     const firstSnapshot = graph.snapshots![0];
-    expect(firstSnapshot.relations['users']).toBeDefined();
-    expect(firstSnapshot.relations['users'].columns).toHaveLength(3);
+    expect(firstSnapshot.schema.columns).toHaveLength(3);
+    expect(firstSnapshot.schema.columns.every(c => c.source === 'users')).toBe(true);
     
     // Check that SELECT transformation creates result
-    const selectSnapshot = graph.snapshots!.find(s => s.relations['_result']);
+    const selectSnapshot = graph.snapshots![graph.snapshots!.length - 1];
     expect(selectSnapshot).toBeDefined();
-    expect(selectSnapshot!.relations['_result'].columns).toHaveLength(2);
+    expect(selectSnapshot!.schema.columns).toHaveLength(2);
   });
 
   it('should track schema through aggregations', () => {
@@ -117,18 +119,20 @@ describe('convert with snapshots', () => {
     const graph: Graph = convert(ast);
     
     // Check GROUP BY snapshot
-    const groupBySnapshot = graph.snapshots!.find(s => s.relations['_grouped']);
+    const groupBySnapshot = graph.snapshots!.find((s, idx) => 
+      idx > 0 && s.schema.columns.some(c => c.name === 'category')
+    );
     expect(groupBySnapshot).toBeDefined();
     
     // GROUP BY should have the grouped column
-    const groupedColumns = groupBySnapshot!.relations['_grouped'].columns;
+    const groupedColumns = groupBySnapshot!.schema.columns;
     expect(groupedColumns.length).toBeGreaterThan(0);
     expect(groupedColumns.some(c => c.name === 'category')).toBe(true);
     
     // Check SELECT snapshot with aggregations
-    const selectSnapshot = graph.snapshots!.find(s => s.relations['_result']);
+    const selectSnapshot = graph.snapshots![graph.snapshots!.length - 1];
     expect(selectSnapshot).toBeDefined();
-    const resultColumns = selectSnapshot!.relations['_result'].columns;
+    const resultColumns = selectSnapshot!.schema.columns;
     expect(resultColumns).toHaveLength(3);
     expect(resultColumns.some(c => c.name === 'category')).toBe(true);
     expect(resultColumns.some(c => c.name === 'total')).toBe(true);

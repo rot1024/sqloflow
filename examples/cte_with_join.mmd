@@ -1,8 +1,8 @@
 flowchart LR
     subgraph cte_recent_max [CTE: recent_max]
         direction TB
-        node_3["SELECT customer_id, MAX(total_amount) AS max_total"]
-        node_2["GROUP BY customer_id"]
+        node_3["SELECT<br/>---<br/>customer_id<br/>max_total"]
+        node_2["GROUP BY<br/>---<br/>customer_id"]
         node_1["WHERE<br/>---<br/>created_at &gt;= CURRENT_DATE() - INTERVAL &#39;30 days&#39;"]
         node_0["FROM<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
         node_0 --> node_1
@@ -13,7 +13,7 @@ flowchart LR
     node_5["FROM<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
     node_6["INNER JOIN<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id<br/>recent_max.customer_id<br/>recent_max.max_total"]
     node_7["WHERE<br/>---<br/>o.total_amount = r.max_total"]
-    node_8["SELECT o.id, o.total_amount"]
+    node_8["SELECT<br/>---<br/>o.o.id<br/>o.o.total_amount"]
     node_3 -->|CTE result| node_4
     node_5 --> node_6
     node_4 --> node_6

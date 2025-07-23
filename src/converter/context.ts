@@ -1,20 +1,26 @@
-import type { ConversionContext } from './types.js';
+import type { ConversionContext, RelationInfo } from './types.js';
 import type { SchemaInfo } from '../types/schema.js';
-import type { RelationSchema } from '../types/ir.js';
+import type { ColumnSchema } from '../types/ir.js';
 
 export const createContext = (schema: SchemaInfo): ConversionContext => {
-  const currentSchema: Record<string, RelationSchema> = {};
-  // Initialize current schema from extracted tables
+  const currentRelations: Record<string, RelationInfo> = {};
+  const currentColumns: ColumnSchema[] = [];
+  
+  // Initialize relations from extracted tables
   for (const [tableName, tableSchema] of Object.entries(schema.tables)) {
-    currentSchema[tableName] = {
+    const relationInfo: RelationInfo = {
       name: tableName,
+      alias: tableName,
       columns: tableSchema.columns.map(col => ({
         id: `${tableName}.${col.name}`,
         name: col.name,
         type: col.type,
-        source: tableName
+        source: tableName,
+        table: tableName
       }))
     };
+    currentRelations[tableName] = relationInfo;
+    // Don't add to currentColumns yet - that happens when table is used in FROM
   }
   
   return {
@@ -22,8 +28,10 @@ export const createContext = (schema: SchemaInfo): ConversionContext => {
     edgeCounter: 0,
     subqueryCounter: 0,
     schema,
-    currentSchema,
+    currentRelations,
+    currentColumns,
     snapshots: [],
-    cteNodes: {}
+    cteNodes: {},
+    tableSourceNodes: {}
   };
 };

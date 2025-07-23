@@ -33,16 +33,12 @@ export const renderMermaid = (graph: Graph): string => {
   // Also use snapshots for nodes where we have them
   if (graph.snapshots) {
     graph.snapshots.forEach(snapshot => {
-      const stepNode = graph.nodes.find(n => n.id === snapshot.stepId);
-      if (stepNode && snapshot.relations) {
+      const stepNode = graph.nodes.find(n => n.id === snapshot.nodeId);
+      if (stepNode && snapshot.schema) {
         const columns: string[] = [];
-        Object.entries(snapshot.relations).forEach(([alias, schema]) => {
-          if (!alias.startsWith('_')) {
-            schema.columns.forEach(col => {
-              const qualifiedName = col.source ? `${col.source}.${col.name}` : `${alias}.${col.name}`;
-              columns.push(qualifiedName);
-            });
-          }
+        snapshot.schema.columns.forEach(col => {
+          const qualifiedName = col.source ? `${col.source}.${col.name}` : col.name;
+          columns.push(qualifiedName);
         });
         if (columns.length > 0) {
           // Override with snapshot data if available

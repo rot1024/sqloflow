@@ -139,200 +139,132 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "orders": {
-          "name": "orders",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "orders": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "orders.created_at",
-              "name": "created_at",
-              "source": "orders"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "created_at",
+            "name": "created_at"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_2",
-      "relations": {
-        "_grouped": {
-          "name": "_grouped",
-          "columns": [
-            {
-              "id": "_grouped.customer_id",
-              "name": "customer_id",
-              "source": "_inferred"
-            }
-          ]
-        }
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "customer_id",
+            "name": "customer_id"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.customer_id",
-              "name": "customer_id",
-              "source": "_inferred"
-            },
-            {
-              "id": "_result.max_total",
-              "name": "max_total",
-              "type": "numeric",
-              "source": "_aggregate"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "customer_id",
+            "name": "customer_id"
+          },
+          {
+            "id": "max_total",
+            "name": "max_total",
+            "type": "numeric"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_5",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.customer_id",
-              "name": "customer_id",
-              "source": "_inferred"
-            },
-            {
-              "id": "_result.max_total",
-              "name": "max_total",
-              "type": "numeric",
-              "source": "_aggregate"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": []
-        }
+      "nodeId": "node_5",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_6",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.customer_id",
-              "name": "customer_id",
-              "source": "_inferred"
-            },
-            {
-              "id": "_result.max_total",
-              "name": "max_total",
-              "type": "numeric",
-              "source": "_aggregate"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.customer_id",
-              "name": "customer_id",
-              "source": "o"
-            }
-          ]
-        },
-        "r": {
-          "name": "recent_max",
-          "columns": [
-            {
-              "id": "r.customer_id",
-              "name": "customer_id",
-              "source": "r"
-            }
-          ]
-        }
+      "nodeId": "node_6",
+      "schema": {
+        "columns": [
+          {
+            "id": "r.customer_id",
+            "name": "customer_id",
+            "source": "r",
+            "table": "recent_max",
+            "sourceNodeId": "node_4"
+          },
+          {
+            "id": "r.max_total",
+            "name": "max_total",
+            "type": "numeric",
+            "source": "r",
+            "table": "recent_max",
+            "sourceNodeId": "node_4"
+          },
+          {
+            "id": "o.customer_id",
+            "name": "customer_id",
+            "source": "o",
+            "sourceNodeId": "node_5"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_7",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.customer_id",
-              "name": "customer_id",
-              "source": "_inferred"
-            },
-            {
-              "id": "_result.max_total",
-              "name": "max_total",
-              "type": "numeric",
-              "source": "_aggregate"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.customer_id",
-              "name": "customer_id",
-              "source": "o"
-            },
-            {
-              "id": "o.total_amount",
-              "name": "total_amount",
-              "source": "o"
-            }
-          ]
-        },
-        "r": {
-          "name": "recent_max",
-          "columns": [
-            {
-              "id": "r.customer_id",
-              "name": "customer_id",
-              "source": "r"
-            },
-            {
-              "id": "r.max_total",
-              "name": "max_total",
-              "source": "r"
-            }
-          ]
-        }
+      "nodeId": "node_7",
+      "schema": {
+        "columns": [
+          {
+            "id": "r.customer_id",
+            "name": "customer_id",
+            "source": "r",
+            "table": "recent_max",
+            "sourceNodeId": "node_4"
+          },
+          {
+            "id": "r.max_total",
+            "name": "max_total",
+            "type": "numeric",
+            "source": "r",
+            "table": "recent_max",
+            "sourceNodeId": "node_4"
+          },
+          {
+            "id": "o.customer_id",
+            "name": "customer_id",
+            "source": "o",
+            "sourceNodeId": "node_5"
+          },
+          {
+            "id": "o.total_amount",
+            "name": "total_amount",
+            "source": "o",
+            "sourceNodeId": "node_5"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_8",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.o.id",
-              "name": "o.id",
-              "source": "o"
-            },
-            {
-              "id": "_result.o.total_amount",
-              "name": "o.total_amount",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_8",
+      "schema": {
+        "columns": [
+          {
+            "id": "o.id",
+            "name": "o.id",
+            "source": "o"
+          },
+          {
+            "id": "o.total_amount",
+            "name": "o.total_amount",
+            "source": "o"
+          }
+        ]
       }
     }
   ]

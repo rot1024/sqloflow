@@ -1,9 +1,9 @@
 flowchart LR
     node_0[FROM products]
     node_1["WHERE<br/>---<br/>status = &#39;active&#39; AND price &gt; 10"]
-    node_2["GROUP BY category"]
+    node_2["GROUP BY<br/>---<br/>category"]
     node_3["HAVING<br/>---<br/>COUNT(*) &gt; 5"]
-    node_4["SELECT category, COUNT(*) AS total_products, AVG(price) AS avg_price, MAX(price) AS max_price"]
+    node_4["SELECT<br/>---<br/>category<br/>total_products<br/>avg_price<br/>max_price"]
     node_5["ORDER BY total_products DESC, avg_price ASC"]
     node_6["LIMIT 10 OFFSET 20"]
     node_0 --> node_1

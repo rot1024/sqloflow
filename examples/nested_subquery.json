@@ -28,19 +28,12 @@
           },
           {
             "id": "subq_0_node_1",
-            "kind": "column",
-            "label": "amount",
-            "sql": "unknown",
-            "parent": "node_0"
-          },
-          {
-            "id": "subq_0_node_2",
             "kind": "clause",
             "label": "WHERE",
             "sql": "customer_id IN expr"
           },
           {
-            "id": "subq_0_node_3",
+            "id": "subq_0_node_2",
             "kind": "subquery",
             "label": "Subquery (in)",
             "sql": "(subquery)",
@@ -91,7 +84,7 @@
             }
           },
           {
-            "id": "subq_0_node_4",
+            "id": "subq_0_node_3",
             "kind": "op",
             "label": "SELECT",
             "sql": "AVG(amount)"
@@ -100,7 +93,7 @@
         "edges": [
           {
             "id": "subq_0_edge_0",
-            "kind": "defines",
+            "kind": "flow",
             "from": {
               "node": "subq_0_node_0"
             },
@@ -110,32 +103,22 @@
           },
           {
             "id": "subq_0_edge_1",
-            "kind": "flow",
+            "kind": "subqueryResult",
             "from": {
-              "node": "subq_0_node_0"
+              "node": "subq_0_node_2"
             },
             "to": {
-              "node": "subq_0_node_2"
+              "node": "subq_0_node_1"
             }
           },
           {
             "id": "subq_0_edge_2",
-            "kind": "subqueryResult",
-            "from": {
-              "node": "subq_0_node_3"
-            },
-            "to": {
-              "node": "subq_0_node_2"
-            }
-          },
-          {
-            "id": "subq_0_edge_3",
             "kind": "flow",
             "from": {
-              "node": "subq_0_node_2"
+              "node": "subq_0_node_1"
             },
             "to": {
-              "node": "subq_0_node_4"
+              "node": "subq_0_node_3"
             }
           }
         ]
@@ -182,51 +165,31 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "orders": {
-          "name": "orders",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "orders": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "orders.customer_id",
-              "name": "customer_id",
-              "source": "orders"
-            },
-            {
-              "id": "orders.country",
-              "name": "country",
-              "source": "orders"
-            }
-          ]
-        },
-        "customers": {
-          "name": "customers",
-          "columns": []
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "amount",
+            "name": "amount"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.*",
-              "name": "*",
-              "source": "_unknown"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "*",
+            "name": "*"
+          }
+        ]
       }
     }
   ]

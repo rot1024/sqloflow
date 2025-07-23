@@ -107,80 +107,61 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "products": {
-          "name": "products",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "products": {
-          "name": "products",
-          "columns": [
-            {
-              "id": "products.status",
-              "name": "status",
-              "source": "products"
-            },
-            {
-              "id": "products.price",
-              "name": "price",
-              "source": "products"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "status",
+            "name": "status"
+          },
+          {
+            "id": "price",
+            "name": "price"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_2",
-      "relations": {
-        "_grouped": {
-          "name": "_grouped",
-          "columns": [
-            {
-              "id": "_grouped.category",
-              "name": "category",
-              "source": "_inferred"
-            }
-          ]
-        }
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "category",
+            "name": "category"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_4",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.category",
-              "name": "category",
-              "source": "_inferred"
-            },
-            {
-              "id": "_result.total_products",
-              "name": "total_products",
-              "type": "numeric",
-              "source": "_aggregate"
-            },
-            {
-              "id": "_result.avg_price",
-              "name": "avg_price",
-              "type": "numeric",
-              "source": "_aggregate"
-            },
-            {
-              "id": "_result.max_price",
-              "name": "max_price",
-              "type": "numeric",
-              "source": "_aggregate"
-            }
-          ]
-        }
+      "nodeId": "node_4",
+      "schema": {
+        "columns": [
+          {
+            "id": "category",
+            "name": "category"
+          },
+          {
+            "id": "total_products",
+            "name": "total_products",
+            "type": "numeric"
+          },
+          {
+            "id": "avg_price",
+            "name": "avg_price",
+            "type": "numeric"
+          },
+          {
+            "id": "max_price",
+            "name": "max_price",
+            "type": "numeric"
+          }
+        ]
       }
     }
   ]

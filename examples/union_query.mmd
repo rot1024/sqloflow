@@ -1,9 +1,9 @@
 flowchart LR
     node_0[FROM users]
-    node_1["SELECT id, name, &#39;user&#39; AS source"]
-    node_2[UNION ALL]
+    node_1["SELECT<br/>---<br/>id<br/>name<br/>source"]
+    node_2["UNION ALL<br/>---<br/>id<br/>name<br/>source"]
     node_3[FROM organizations]
-    node_4["SELECT id, company_name AS name, &#39;org&#39; AS source"]
+    node_4["SELECT<br/>---<br/>id<br/>name<br/>source"]
     node_0 --> node_1
     node_1 --> node_2
     node_3 --> node_4

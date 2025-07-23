@@ -1,12 +1,23 @@
 import type { ConversionContext } from './types.js';
-import type { SchemaSnapshot, RelationSchema, ColumnSchema } from '../types/ir.js';
+import type { SchemaSnapshot, ColumnSchema } from '../types/ir.js';
 import type { Column, ExpressionValue, ColumnRef, Binary, Function as FunctionExpr, AggrFunc, Select } from 'node-sql-parser';
 import { getColumnName } from './helpers.js';
 
-export const createSnapshot = (ctx: ConversionContext, stepId: string): void => {
+export const createSnapshot = (ctx: ConversionContext, nodeId: string): void => {
+  // Deep copy columns and omit sourceNodeId if it matches the current nodeId
+  const columns = ctx.currentColumns.map(col => {
+    const columnCopy = JSON.parse(JSON.stringify(col));
+    if (columnCopy.sourceNodeId === nodeId) {
+      delete columnCopy.sourceNodeId;
+    }
+    return columnCopy;
+  });
+  
   const snapshot: SchemaSnapshot = {
-    stepId,
-    relations: JSON.parse(JSON.stringify(ctx.currentSchema)) // Deep copy
+    nodeId,
+    schema: {
+      columns
+    }
   };
   ctx.snapshots.push(snapshot);
 };
@@ -14,36 +25,27 @@ export const createSnapshot = (ctx: ConversionContext, stepId: string): void => 
 export const applySchemaTransformation = (
   ctx: ConversionContext,
   nodeId: string,
-  transformation: (schema: Record<string, RelationSchema>) => Record<string, RelationSchema>
+  transformation: (columns: ColumnSchema[]) => ColumnSchema[]
 ): void => {
-  ctx.currentSchema = transformation(ctx.currentSchema);
+  ctx.currentColumns = transformation(ctx.currentColumns);
   createSnapshot(ctx, nodeId);
 };
 
 export const applySelectTransformation = (ctx: ConversionContext, nodeId: string, columns: Column[]): void => {
-  applySchemaTransformation(ctx, nodeId, (schema) => {
-    const newSchema: Record<string, RelationSchema> = {};
-    
-    // Create a new relation for the SELECT result
-    const resultRelation: RelationSchema = {
-      name: '_result',
-      columns: []
-    };
+  applySchemaTransformation(ctx, nodeId, (currentColumns) => {
+    const resultColumns: ColumnSchema[] = [];
     
     // Handle SELECT *
     if (columns.length === 1 && columns[0].expr?.type === 'star') {
-      // Copy all columns from all relations
-      for (const relation of Object.values(schema)) {
-        if (!relation.name.startsWith('_')) {
-          for (const col of relation.columns) {
-            resultRelation.columns.push({
-              id: `_result.${col.name}`,
-              name: col.name,
-              type: col.type,
-              source: col.source
-            });
-          }
-        }
+      // Copy all columns from current schema
+      for (const col of currentColumns) {
+        resultColumns.push({
+          id: col.name,
+          name: col.name,
+          type: col.type,
+          source: col.source,
+          table: col.table
+        });
       }
     } else {
       // Handle specific columns
@@ -55,20 +57,16 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
             const tableName = 'table' in col.expr ? col.expr.table : null;
             
             // Find the source column in current schema
-            let sourceColumn: ColumnSchema | undefined;
-            for (const relation of Object.values(schema)) {
-              sourceColumn = relation.columns.find(c => {
-                if (tableName) {
-                  // If table is specified, match table.column format
-                  const columnValue = 'column' in col.expr && typeof col.expr.column === 'string' 
-                    ? col.expr.column 
-                    : colName;
-                  return c.name === columnValue || c.id === `${tableName}.${columnValue}`;
-                }
-                return c.name === colName || c.id === colName;
-              });
-              if (sourceColumn) break;
-            }
+            let sourceColumn: ColumnSchema | undefined = currentColumns.find(c => {
+              if (tableName) {
+                // If table is specified, match by source (alias)
+                const columnValue = 'column' in col.expr && typeof col.expr.column === 'string' 
+                  ? col.expr.column 
+                  : colName;
+                return c.source === tableName && c.name === columnValue;
+              }
+              return c.name === colName;
+            });
             
             // If column not found in schema, infer it
             if (!sourceColumn) {
@@ -77,73 +75,60 @@ export const applySelectTransformation = (ctx: ConversionContext, nodeId: string
                 columnValue = typeof col.expr.column === 'string' ? col.expr.column : colName;
               }
               sourceColumn = {
-                id: tableName ? `${tableName}.${columnValue}` : colName,
+                id: tableName ? `${tableName}.${columnValue}` : columnValue,
                 name: columnValue,
                 type: undefined, // Unknown type
-                source: tableName || '_unknown'
+                source: tableName || undefined,
+                table: ctx.currentRelations[tableName || '']?.name
+                // Don't set sourceNodeId - this is a reference to an unknown column
               };
             }
             
-            resultRelation.columns.push({
-              id: `_result.${alias}`,
+            resultColumns.push({
+              id: alias,
               name: alias,
               type: sourceColumn.type,
-              source: sourceColumn.source
+              source: sourceColumn.source,
+              table: sourceColumn.table,
+              sourceNodeId: sourceColumn.sourceNodeId
             });
           } else if (col.expr.type === 'aggr_func' && 'name' in col.expr) {
             const funcName = typeof col.expr.name === 'string' ? col.expr.name.toUpperCase() : 'UNKNOWN';
             const alias = typeof col.as === 'string' ? col.as : col.as?.value || funcName;
             
-            resultRelation.columns.push({
-              id: `_result.${alias}`,
+            resultColumns.push({
+              id: alias,
               name: alias,
-              type: 'numeric', // Simplified type inference
-              source: '_aggregate'
+              type: 'numeric' // Simplified type inference
+              // No source for aggregate functions
             });
           } else {
             // Handle other expression types (constants, functions, etc.)
             const alias = typeof col.as === 'string' ? col.as : col.as?.value || 'expr';
-            resultRelation.columns.push({
-              id: `_result.${alias}`,
+            resultColumns.push({
+              id: alias,
               name: alias,
-              type: undefined,
-              source: '_expression'
+              type: undefined
+              // No source for expressions
             });
           }
         }
       }
     }
     
-    newSchema['_result'] = resultRelation;
-    return newSchema;
+    return resultColumns;
   });
 };
 
 export const applyJoinTransformation = (ctx: ConversionContext, nodeId: string, tableNames: string[]): void => {
-  applySchemaTransformation(ctx, nodeId, (schema) => {
-    const newSchema: Record<string, RelationSchema> = {};
-    
-    // Preserve all existing relations and their columns
-    for (const [relationName, relation] of Object.entries(schema)) {
-      newSchema[relationName] = {
-        name: relation.name,
-        columns: [...relation.columns]
-      };
-    }
-    
-    return newSchema;
-  });
+  // When joining, we simply preserve all columns from both tables
+  // The columns are already in ctx.currentColumns from FROM and previous JOINs
+  createSnapshot(ctx, nodeId);
 };
 
 export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: string, groupByColumns: Select['groupby']): void => {
-  applySchemaTransformation(ctx, nodeId, (schema) => {
-    const newSchema: Record<string, RelationSchema> = {};
-    
-    // After GROUP BY, only grouped columns and aggregates are available
-    const groupedRelation: RelationSchema = {
-      name: '_grouped',
-      columns: []
-    };
+  applySchemaTransformation(ctx, nodeId, (currentColumns) => {
+    const groupedColumns: ColumnSchema[] = [];
     
     // Add grouped columns - groupByColumns.columns contains the actual column list
     const columns = groupByColumns?.columns || [];
@@ -166,30 +151,25 @@ export const applyGroupByTransformation = (ctx: ConversionContext, nodeId: strin
       }
       
       // Find the source column
-      let sourceColumn: ColumnSchema | undefined;
-      for (const relation of Object.values(schema)) {
-        sourceColumn = relation.columns.find(c => c.name === colName);
-        if (sourceColumn) break;
-      }
+      let sourceColumn = currentColumns.find(c => c.name === colName);
       
       if (!sourceColumn) {
         // Infer column if not found
         sourceColumn = {
           id: colName,
           name: colName,
-          type: undefined,
-          source: '_inferred'
+          type: undefined
+          // Don't set sourceNodeId - this is a reference to an unknown column
         };
       }
       
-      groupedRelation.columns.push({
+      groupedColumns.push({
         ...sourceColumn,
-        id: `_grouped.${colName}`
+        id: colName
       });
     }
     
-    newSchema['_grouped'] = groupedRelation;
-    return newSchema;
+    return groupedColumns;
   });
 };
 
@@ -220,33 +200,25 @@ export const inferColumnsFromExpression = (ctx: ConversionContext, expr: Express
     }
     
     if (columnName && typeof columnName === 'string') {
-      // Find the relation to add the column to
-      let targetRelation: string | undefined;
+      // Check if column already exists in current schema
+      const exists = ctx.currentColumns.some(c => 
+        c.name === columnName && (!tableName || c.source === tableName)
+      );
       
-      if (tableName) {
-        targetRelation = tableName;
-      } else {
-        // No table specified, try to find any non-special relation
-        targetRelation = Object.keys(ctx.currentSchema).find(key => 
-          !key.startsWith('_') && ctx.currentSchema[key]
-        );
-      }
-      
-      if (targetRelation && ctx.currentSchema[targetRelation]) {
-        // Check if column already exists
-        const exists = ctx.currentSchema[targetRelation].columns.some(
-          c => c.name === columnName
-        );
+      if (!exists) {
+        // Add inferred column - these are references discovered in WHERE/ON clauses
+        const relationInfo = tableName ? ctx.currentRelations[tableName] : undefined;
+        // If we know which node introduced this table alias, use that as sourceNodeId
+        const sourceNodeId = tableName && ctx.tableSourceNodes ? ctx.tableSourceNodes[tableName] : undefined;
         
-        if (!exists) {
-          // Add inferred column
-          ctx.currentSchema[targetRelation].columns.push({
-            id: `${targetRelation}.${columnName}`,
-            name: columnName,
-            type: undefined,
-            source: targetRelation
-          });
-        }
+        ctx.currentColumns.push({
+          id: tableName ? `${tableName}.${columnName}` : columnName,
+          name: columnName,
+          type: undefined,
+          source: tableName || undefined,
+          table: relationInfo?.name,
+          sourceNodeId
+        });
       }
     }
   } else if (expr.type === 'function' && 'args' in expr) {
@@ -260,40 +232,7 @@ export const inferColumnsFromExpression = (ctx: ConversionContext, expr: Express
 };
 
 export const applyUnionTransformation = (ctx: ConversionContext, nodeId: string): void => {
-  applySchemaTransformation(ctx, nodeId, (schema) => {
-    const newSchema: Record<string, RelationSchema> = {};
-    
-    // Create a new relation for the UNION result
-    const unionRelation: RelationSchema = {
-      name: '_result',
-      columns: []
-    };
-    
-    // Find the result relations from both SELECT statements
-    // They should be the most recent _result relations in the schema
-    const resultRelations = Object.entries(schema)
-      .filter(([key]) => key === '_result')
-      .map(([_, rel]) => rel);
-    
-    if (resultRelations.length > 0) {
-      // Use the columns from the first SELECT as the base
-      // UNION requires compatible column structures
-      const baseColumns = resultRelations[0].columns;
-      
-      // Copy columns to the union result
-      baseColumns.forEach(col => {
-        unionRelation.columns.push({
-          id: `_result.${col.name}`,
-          name: col.name,
-          type: col.type,
-          source: '_result'
-        });
-      });
-    }
-    
-    // Keep the union result
-    newSchema._result = unionRelation;
-    
-    return newSchema;
-  });
+  // For UNION, we keep the columns from the first SELECT
+  // The columns should already be in ctx.currentColumns from the SELECT transformation
+  createSnapshot(ctx, nodeId);
 };

@@ -104,57 +104,42 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "u": {
-          "name": "users",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "u": {
-          "name": "users",
-          "columns": [
-            {
-              "id": "u.id",
-              "name": "id",
-              "source": "u"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.total_amount",
-              "name": "total_amount",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "u.id",
+            "name": "id",
+            "source": "u",
+            "table": "users",
+            "sourceNodeId": "node_0"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.u.id",
-              "name": "u.id",
-              "source": "u"
-            },
-            {
-              "id": "_result.u.name",
-              "name": "u.name",
-              "source": "u"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "u.id",
+            "name": "u.id",
+            "source": "u",
+            "table": "users"
+          },
+          {
+            "id": "u.name",
+            "name": "u.name",
+            "source": "u",
+            "table": "users"
+          }
+        ]
       }
     }
   ]

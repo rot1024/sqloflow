@@ -8,33 +8,12 @@
     },
     {
       "id": "node_1",
-      "kind": "column",
-      "label": "id",
-      "sql": "int",
-      "parent": "node_0"
-    },
-    {
-      "id": "node_2",
-      "kind": "column",
-      "label": "name",
-      "sql": "varchar(100)",
-      "parent": "node_0"
-    },
-    {
-      "id": "node_3",
-      "kind": "column",
-      "label": "price",
-      "sql": "decimal(10)",
-      "parent": "node_0"
-    },
-    {
-      "id": "node_4",
       "kind": "clause",
       "label": "WHERE",
       "sql": "price > 50"
     },
     {
-      "id": "node_5",
+      "id": "node_2",
       "kind": "op",
       "label": "SELECT",
       "sql": "name, price"
@@ -43,7 +22,7 @@
   "edges": [
     {
       "id": "edge_0",
-      "kind": "defines",
+      "kind": "flow",
       "from": {
         "node": "node_0"
       },
@@ -53,122 +32,96 @@
     },
     {
       "id": "edge_1",
-      "kind": "defines",
+      "kind": "flow",
       "from": {
-        "node": "node_0"
+        "node": "node_1"
       },
       "to": {
         "node": "node_2"
-      }
-    },
-    {
-      "id": "edge_2",
-      "kind": "defines",
-      "from": {
-        "node": "node_0"
-      },
-      "to": {
-        "node": "node_3"
-      }
-    },
-    {
-      "id": "edge_3",
-      "kind": "flow",
-      "from": {
-        "node": "node_0"
-      },
-      "to": {
-        "node": "node_4"
-      }
-    },
-    {
-      "id": "edge_4",
-      "kind": "flow",
-      "from": {
-        "node": "node_4"
-      },
-      "to": {
-        "node": "node_5"
       }
     }
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "products": {
-          "name": "products",
-          "columns": [
-            {
-              "id": "products.id",
-              "name": "id",
-              "type": "int",
-              "source": "products"
-            },
-            {
-              "id": "products.name",
-              "name": "name",
-              "type": "varchar(100)",
-              "source": "products"
-            },
-            {
-              "id": "products.price",
-              "name": "price",
-              "type": "decimal(10)",
-              "source": "products"
-            }
-          ]
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": [
+          {
+            "id": "products.id",
+            "name": "id",
+            "type": "int",
+            "source": "products",
+            "table": "products"
+          },
+          {
+            "id": "products.name",
+            "name": "name",
+            "type": "varchar(100)",
+            "source": "products",
+            "table": "products"
+          },
+          {
+            "id": "products.price",
+            "name": "price",
+            "type": "decimal(10)",
+            "source": "products",
+            "table": "products"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_4",
-      "relations": {
-        "products": {
-          "name": "products",
-          "columns": [
-            {
-              "id": "products.id",
-              "name": "id",
-              "type": "int",
-              "source": "products"
-            },
-            {
-              "id": "products.name",
-              "name": "name",
-              "type": "varchar(100)",
-              "source": "products"
-            },
-            {
-              "id": "products.price",
-              "name": "price",
-              "type": "decimal(10)",
-              "source": "products"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "products.id",
+            "name": "id",
+            "type": "int",
+            "source": "products",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "products.name",
+            "name": "name",
+            "type": "varchar(100)",
+            "source": "products",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "products.price",
+            "name": "price",
+            "type": "decimal(10)",
+            "source": "products",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_5",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.name",
-              "name": "name",
-              "type": "varchar(100)",
-              "source": "products"
-            },
-            {
-              "id": "_result.price",
-              "name": "price",
-              "type": "decimal(10)",
-              "source": "products"
-            }
-          ]
-        }
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "name",
+            "name": "name",
+            "type": "varchar(100)",
+            "source": "products",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "price",
+            "name": "price",
+            "type": "decimal(10)",
+            "source": "products",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          }
+        ]
       }
     }
   ]

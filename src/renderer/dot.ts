@@ -2,7 +2,7 @@
  * Enhanced schema view renderer that shows column-level details
  */
 
-import type { Graph, Node, Edge, SubqueryNode, SchemaSnapshot, RelationSchema } from '../types/ir.js';
+import type { Graph, Node, Edge, SubqueryNode, SchemaSnapshot } from '../types/ir.js';
 import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
 import { 
   inferSchemaFromGraph, 
@@ -282,34 +282,10 @@ export const renderDot = (graph: Graph): string => {
     let schemaInfo: string[] = [];
     if (hasMultipleInputs && graph.snapshots) {
       // Find the snapshot for this node
-      const snapshot = graph.snapshots.find(s => s.stepId === op.id);
-      if (snapshot?.relations) {
-        // Extract column information from the snapshot
-        const resultRelation = snapshot.relations._result || snapshot.relations._grouped;
-        if (resultRelation) {
-          schemaInfo = resultRelation.columns.map(col => col.name);
-        } else if (op.operation === 'UNION' || op.operation === 'UNION ALL') {
-          // For UNION, collect all unique columns from all input relations
-          const uniqueColumns = new Set<string>();
-          Object.entries(snapshot.relations).forEach(([relName, rel]) => {
-            if (!relName.startsWith('_')) {
-              rel.columns.forEach(col => {
-                uniqueColumns.add(col.name);
-              });
-            }
-          });
-          // Add all columns without table prefixes since they're unified
-          schemaInfo = Array.from(uniqueColumns);
-        } else {
-          // Collect all columns from all relations
-          const allColumns = new Set<string>();
-          Object.values(snapshot.relations).forEach(rel => {
-            if (!rel.name.startsWith('_')) {
-              rel.columns.forEach(col => allColumns.add(col.name));
-            }
-          });
-          schemaInfo = Array.from(allColumns);
-        }
+      const snapshot = graph.snapshots.find(s => s.nodeId === op.id);
+      if (snapshot?.schema) {
+        // Extract column names from the snapshot
+        schemaInfo = snapshot.schema.columns.map(col => col.name);
       }
     }
     

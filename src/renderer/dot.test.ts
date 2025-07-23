@@ -33,15 +33,12 @@ describe('renderDot', () => {
       ],
       snapshots: [
         {
-          stepId: 'n1',
-          relations: {
-            users: {
-              name: 'users',
-              columns: [
-                { id: 'c1', name: 'id', type: 'INT' },
-                { id: 'c2', name: 'name', type: 'VARCHAR' }
-              ]
-            }
+          nodeId: 'n1',
+          schema: {
+            columns: [
+              { id: 'c1', name: 'id', type: 'INT', source: 'users' },
+              { id: 'c2', name: 'name', type: 'VARCHAR', source: 'users' }
+            ]
           }
         }
       ]
@@ -123,15 +120,12 @@ describe('renderDot', () => {
       ],
       snapshots: [
         {
-          stepId: 'n1',
-          relations: {
-            users: {
-              name: 'users',
-              columns: [
-                { id: 'c1', name: 'id', type: 'INT' },
-                { id: 'c2', name: 'name', type: 'VARCHAR' }
-              ]
-            }
+          nodeId: 'n1',
+          schema: {
+            columns: [
+              { id: 'c1', name: 'id', type: 'INT', source: 'users' },
+              { id: 'c2', name: 'name', type: 'VARCHAR', source: 'users' }
+            ]
           }
         }
       ]

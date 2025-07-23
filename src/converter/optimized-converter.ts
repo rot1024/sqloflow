@@ -100,20 +100,20 @@ export const convertSelectStatementOptimized = (
 
       // Add table to schema
       if (typeof table === 'object' && 'table' in table && table.table) {
-        applySchemaTransformation(ctx, fromNode.id, (schema) => {
-          // Add table if not already present
-          if (!schema[table.table] && ctx.schema.tables[table.table]) {
-            schema[table.table] = {
-              name: table.table,
-              columns: ctx.schema.tables[table.table].columns.map(col => ({
-                id: `${table.table}.${col.name}`,
-                name: col.name,
-                type: col.type,
-                source: table.table
-              }))
-            };
+        const tableName = table.table as string;
+        applySchemaTransformation(ctx, fromNode.id, (columns) => {
+          // Add columns from table if available
+          if (ctx.schema.tables[tableName]) {
+            const newColumns = ctx.schema.tables[tableName].columns.map(col => ({
+              id: `${tableName}.${col.name}`,
+              name: col.name,
+              type: col.type,
+              source: tableName,
+              table: tableName
+            }));
+            return [...columns, ...newColumns];
           }
-          return schema;
+          return columns;
         });
       }
     }
@@ -194,29 +194,22 @@ export const convertSelectStatementOptimized = (
   }
 
   // Apply SELECT transformation to schema
-  applySchemaTransformation(ctx, selectNode.id, (schema) => {
+  applySchemaTransformation(ctx, selectNode.id, (columns) => {
     // Add derived columns
+    const newColumns = [...columns];
     stmt.columns.forEach(col => {
       if (col.as) {
         const alias = typeof col.as === 'string' ? col.as : col.as.value;
         const columnSchema: ColumnSchema = {
-          id: `derived.${alias}`,
+          id: alias,
           name: alias,
-          type: 'unknown',
-          source: 'derived'
+          type: 'unknown'
+          // No source for derived columns
         };
-        
-        // Find or create derived relation
-        if (!schema['derived']) {
-          schema['derived'] = {
-            name: 'derived',
-            columns: []
-          };
-        }
-        schema['derived'].columns.push(columnSchema);
+        newColumns.push(columnSchema);
       }
     });
-    return schema;
+    return newColumns;
   });
 
   createSnapshot(ctx, selectNode.id);

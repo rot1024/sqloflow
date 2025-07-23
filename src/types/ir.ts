@@ -8,7 +8,6 @@ export type NodeKind =
   | "op"
   | "clause"
   | "relation"
-  | "column"
   | "subquery";
 
 export type Node = {
@@ -45,12 +44,11 @@ export type Edge = {
 };
 
 export type SchemaSnapshot = {
-  stepId: string;
-  relations: Record<string, RelationSchema>;
+  nodeId: string;
+  schema: Schema;
 };
 
-export type RelationSchema = {
-  name: string;
+export type Schema = {
   columns: ColumnSchema[];
 };
 
@@ -58,7 +56,9 @@ export type ColumnSchema = {
   id: string;
   name: string;
   type?: string;
-  source?: string;
+  source?: string;  // Table alias (e.g., 'u' for users AS u) - omit for computed columns
+  table?: string;   // Original table name (e.g., 'users')
+  sourceNodeId?: string;  // ID of the node this column originated from
 };
 
 export interface SubqueryNode extends Node {

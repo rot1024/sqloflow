@@ -107,62 +107,34 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "c": {
-          "name": "customers",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "c": {
-          "name": "customers",
-          "columns": [
-            {
-              "id": "c.customer_id",
-              "name": "customer_id",
-              "source": "c"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.customer_id",
-              "name": "customer_id",
-              "source": "o"
-            },
-            {
-              "id": "o.status",
-              "name": "status",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.c.customer_id",
-              "name": "c.customer_id",
-              "source": "c"
-            },
-            {
-              "id": "_result.c.name",
-              "name": "c.name",
-              "source": "c"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "c.customer_id",
+            "name": "c.customer_id",
+            "source": "c",
+            "table": "customers"
+          },
+          {
+            "id": "c.name",
+            "name": "c.name",
+            "source": "c",
+            "table": "customers"
+          }
+        ]
       }
     }
   ]

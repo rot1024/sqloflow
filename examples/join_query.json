@@ -75,87 +75,76 @@
   ],
   "snapshots": [
     {
-      "stepId": "node_0",
-      "relations": {
-        "u": {
-          "name": "users",
-          "columns": []
-        }
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
       }
     },
     {
-      "stepId": "node_1",
-      "relations": {
-        "u": {
-          "name": "users",
-          "columns": [
-            {
-              "id": "u.id",
-              "name": "id",
-              "source": "u"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.user_id",
-              "name": "user_id",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "u.id",
+            "name": "id",
+            "source": "u",
+            "table": "users",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.user_id",
+            "name": "user_id",
+            "source": "o",
+            "table": "orders"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_2",
-      "relations": {
-        "u": {
-          "name": "users",
-          "columns": [
-            {
-              "id": "u.id",
-              "name": "id",
-              "source": "u"
-            }
-          ]
-        },
-        "o": {
-          "name": "orders",
-          "columns": [
-            {
-              "id": "o.user_id",
-              "name": "user_id",
-              "source": "o"
-            },
-            {
-              "id": "o.total",
-              "name": "total",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "u.id",
+            "name": "id",
+            "source": "u",
+            "table": "users",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.user_id",
+            "name": "user_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "o.total",
+            "name": "total",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          }
+        ]
       }
     },
     {
-      "stepId": "node_3",
-      "relations": {
-        "_result": {
-          "name": "_result",
-          "columns": [
-            {
-              "id": "_result.u.name",
-              "name": "u.name",
-              "source": "u"
-            },
-            {
-              "id": "_result.o.total",
-              "name": "o.total",
-              "source": "o"
-            }
-          ]
-        }
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "u.name",
+            "name": "u.name",
+            "source": "u",
+            "table": "users"
+          },
+          {
+            "id": "o.total",
+            "name": "o.total",
+            "source": "o",
+            "table": "orders"
+          }
+        ]
       }
     }
   ]
