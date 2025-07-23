@@ -180,8 +180,12 @@ const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph
   if (schemaColumns && schemaColumns.length > 0) {
     const columns = schemaColumns.map(col => escapeLabel(col)).join('<br/>');
 
-    if (node.kind === 'op' && (node.label === 'SELECT' || node.label === 'GROUP BY')) {
-      // For SELECT and GROUP BY, show operation and columns
+    if (node.kind === 'op' && node.label === 'SELECT' && node.sql) {
+      // For SELECT nodes, show the SQL expressions formatted on separate lines
+      const selectItems = node.sql.split(',').map(item => escapeLabel(item.trim()));
+      return `${nodeId}["${label}<br/>---<br/>${selectItems.join('<br/>')}"]`;
+    } else if (node.kind === 'op' && node.label === 'GROUP BY') {
+      // For GROUP BY, show operation and columns
       return `${nodeId}["${label}<br/>---<br/>${columns}"]`;
     } else if (node.kind === 'relation') {
       // For table nodes, show table name and columns

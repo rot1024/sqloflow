@@ -256,13 +256,20 @@ export const renderDot = (graph: Graph): string => {
             const op = operations.find(op => op.id === node.id)!;
             const labelParts: string[] = [op.operation];
 
-            // Add SQL parameter if available (except for SELECT and UNION operations)
-            if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION')) {
-              labelParts.push(op.sql);
-            }
-
-            // Add output columns if available
-            if (op.outputColumns.length > 0) {
+            // Add SQL parameter if available (except for UNION operations)
+            if (op.sql && !op.operation.includes('UNION')) {
+              // For SELECT, split columns by comma for better readability
+              if (op.operation === 'SELECT') {
+                const selectItems = op.sql.split(',').map(item => {
+                  // Remove surrounding quotes from string literals
+                  return item.trim().replace(/^'([^']*)'(\s+AS\s+)/i, '$1$2');
+                }).join('\\n');
+                labelParts.push(selectItems);
+              } else {
+                labelParts.push(op.sql);
+              }
+            } else if (op.outputColumns.length > 0) {
+              // Only use output columns if SQL is not available
               const outputCols = op.outputColumns.join('\\n');
               labelParts.push(outputCols);
             }
@@ -315,16 +322,25 @@ export const renderDot = (graph: Graph): string => {
 
     const labelParts: string[] = [op.operation];
 
-    // Add SQL parameter if available (except for SELECT and UNION operations)
-    if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION')) {
-      labelParts.push(op.sql);
-    }
-
-    // Add output columns if available
-    const outputCols = op.outputColumns.length > 0 ? op.outputColumns : schemaInfo;
-    if (outputCols.length > 0) {
-      const colsStr = outputCols.join('\\n');
-      labelParts.push(colsStr);
+    // Add SQL parameter if available (except for UNION operations)
+    if (op.sql && !op.operation.includes('UNION')) {
+      // For SELECT, split columns by comma for better readability
+      if (op.operation === 'SELECT') {
+        const selectItems = op.sql.split(',').map(item => {
+          // Remove surrounding quotes from string literals
+          return item.trim().replace(/^'([^']*)'(\s+AS\s+)/i, '$1$2');
+        }).join('\\n');
+        labelParts.push(selectItems);
+      } else {
+        labelParts.push(op.sql);
+      }
+    } else {
+      // Only use output columns if SQL is not available
+      const outputCols = op.outputColumns.length > 0 ? op.outputColumns : schemaInfo;
+      if (outputCols.length > 0) {
+        const colsStr = outputCols.join('\\n');
+        labelParts.push(colsStr);
+      }
     }
 
     const label = buildRecordLabel(...labelParts);

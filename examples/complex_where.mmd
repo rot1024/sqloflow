@@ -5,7 +5,7 @@ flowchart LR
     node_3[customers AS c]
     node_4["INNER JOIN ON o.customer_id = c.customer_id"]
     node_5["WHERE<br/>---<br/>p.category = 'Electronics'<br/>OR<br/>p.category = 'Computers'<br/>OR<br/>p.category = 'Phones'<br/>AND<br/>p.price &gt; 100<br/>AND<br/>p.status = 'active'<br/>AND<br/>o.order_date &gt;= '2023-01-01'<br/>AND<br/>o.order_date &lt;= '2023-12-31'<br/>AND<br/>c.country = 'USA'<br/>OR<br/>c.country = 'Canada'<br/>AND<br/>c.province IN 'ON', 'BC', 'QC'<br/>AND<br/>p.stock_quantity &gt; 0<br/>AND<br/>p.discount &gt; 0.1<br/>OR<br/>p.featured = TRUE<br/>AND<br/>p.rating &gt;= 4.5"]
-    node_6["SELECT<br/>---<br/>p.p.product_id<br/>p.p.name<br/>p.p.price<br/>p.p.category<br/>c.c.customer_name<br/>o.o.order_date"]
+    node_6["SELECT<br/>---<br/>p.product_id<br/>p.name<br/>p.price<br/>p.category<br/>c.customer_name<br/>o.order_date"]
     node_0 --> node_2
     node_1 --> node_2
     node_2 --> node_4
