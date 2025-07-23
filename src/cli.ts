@@ -187,7 +187,5 @@ export const runCli = async (args: string[], options?: {
   }
 };
 
-// Only run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runCli(process.argv.slice(2));
-}
+// Run CLI
+runCli(process.argv.slice(2));
