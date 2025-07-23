@@ -30,9 +30,3 @@ export class RenderError extends SqloflowError {
   }
 }
 
-export class ValidationError extends SqloflowError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}

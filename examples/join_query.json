@@ -8,24 +8,30 @@
     },
     {
       "id": "node_1",
-      "kind": "op",
-      "label": "INNER JOIN",
-      "sql": "orders AS o ON u.id = o.user_id"
+      "kind": "relation",
+      "label": "orders AS o",
+      "sql": "orders AS o"
     },
     {
       "id": "node_2",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "INNER JOIN ON u.id = o.user_id"
+    },
+    {
+      "id": "node_3",
       "kind": "clause",
       "label": "WHERE",
       "sql": "o.total > 100"
     },
     {
-      "id": "node_3",
+      "id": "node_4",
       "kind": "op",
       "label": "SELECT",
       "sql": "u.name, o.total"
     },
     {
-      "id": "node_4",
+      "id": "node_5",
       "kind": "op",
       "label": "ORDER BY",
       "sql": "o.total DESC"
@@ -39,7 +45,7 @@
         "node": "node_0"
       },
       "to": {
-        "node": "node_1"
+        "node": "node_2"
       }
     },
     {
@@ -71,6 +77,16 @@
       "to": {
         "node": "node_4"
       }
+    },
+    {
+      "id": "edge_4",
+      "kind": "flow",
+      "from": {
+        "node": "node_4"
+      },
+      "to": {
+        "node": "node_5"
+      }
     }
   ],
   "snapshots": [
@@ -81,7 +97,7 @@
       }
     },
     {
-      "nodeId": "node_1",
+      "nodeId": "node_2",
       "schema": {
         "columns": [
           {
@@ -95,13 +111,14 @@
             "id": "o.user_id",
             "name": "user_id",
             "source": "o",
-            "table": "orders"
+            "table": "orders",
+            "sourceNodeId": "node_1"
           }
         ]
       }
     },
     {
-      "nodeId": "node_2",
+      "nodeId": "node_3",
       "schema": {
         "columns": [
           {
@@ -129,7 +146,7 @@
       }
     },
     {
-      "nodeId": "node_3",
+      "nodeId": "node_4",
       "schema": {
         "columns": [
           {

@@ -1,7 +1,7 @@
 import type { Node, Edge, SubqueryNode } from '../types/ir.js';
 import type { ConversionContext } from './types.js';
 import type { Select, From } from 'node-sql-parser';
-import { convertSelectStatement } from './statement-converters.js';
+import { convertSelectStatement } from './statement.js';
 
 /**
  * Convert a subquery AST into a SubqueryNode with internal graph
@@ -24,16 +24,16 @@ export const convertSubquery = (
   // Override createNode to add prefix to subquery node IDs
   const originalNodes: Node[] = [];
   const originalEdges: Edge[] = [];
-  
+
   // Convert the subquery as a regular SELECT statement
   const result = convertSelectStatement(subCtx, subquery);
-  
+
   // Add prefix to all node and edge IDs to ensure uniqueness
   const nodes = result.nodes.map(node => ({
     ...node,
     id: `${subqueryPrefix}_${node.id}`
   }));
-  
+
   const edges = result.edges.map(edge => ({
     ...edge,
     id: `${subqueryPrefix}_${edge.id}`,
@@ -64,10 +64,10 @@ export const convertSubquery = (
  */
 const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): string[] | undefined => {
   if (!parentTableRefs || parentTableRefs.length === 0) return undefined;
-  
+
   const correlatedFields: Set<string> = new Set();
   const parentTables = new Set<string>();
-  
+
   // Build set of parent table names/aliases
   parentTableRefs.forEach(ref => {
     if (typeof ref === 'object' && 'as' in ref && ref.as) {
@@ -76,11 +76,11 @@ const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): str
       parentTables.add(ref.table);
     }
   });
-  
+
   // Helper to check if a column reference is correlated
   const checkColumnRef = (expr: any): void => {
     if (!expr) return;
-    
+
     if (expr.type === 'column_ref' && expr.table) {
       if (parentTables.has(expr.table)) {
         // This column references a parent table
@@ -88,7 +88,7 @@ const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): str
         correlatedFields.add(`${expr.table}.${columnName}`);
       }
     }
-    
+
     // Recursively check nested expressions
     if (expr.type === 'binary_expr') {
       checkColumnRef(expr.left);
@@ -103,12 +103,12 @@ const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): str
       }
     }
   };
-  
+
   // Check WHERE clause
   if (subquery.where) {
     checkColumnRef(subquery.where);
   }
-  
+
   // Check SELECT columns
   if (subquery.columns && Array.isArray(subquery.columns)) {
     subquery.columns.forEach(col => {
@@ -117,12 +117,12 @@ const detectCorrelatedFields = (subquery: Select, parentTableRefs?: From[]): str
       }
     });
   }
-  
+
   // Check HAVING clause
   if (subquery.having) {
     checkColumnRef(subquery.having);
   }
-  
+
   return correlatedFields.size > 0 ? Array.from(correlatedFields) : undefined;
 };
 

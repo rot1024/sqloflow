@@ -3,13 +3,13 @@
  */
 
 import type { Graph, Node, Edge, SubqueryNode, SchemaSnapshot } from '../types/ir.js';
-import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery-converter.js';
-import { 
-  inferSchemaFromGraph, 
-  extractColumnReferences, 
+import { findSubqueryResultNode, getSubqueryResultLabel } from '../converter/subquery.js';
+import {
+  inferSchemaFromGraph,
+  extractColumnReferences,
   extractTableAndAlias,
   getJoinColumns,
-  type TableInfo 
+  type TableInfo
 } from './utils/schema-inference.js';
 
 interface OperationNode {
@@ -26,14 +26,14 @@ export const renderDot = (graph: Graph): string => {
   lines.push('  rankdir=LR;');
   lines.push('  node [shape=record];');
   lines.push('');
-  
+
   // Infer schema information from the graph
   const { tables, tableAliases } = inferSchemaFromGraph(graph);
-  
+
   const operations: OperationNode[] = [];
   const fromNodeToTable = new Map<string, string>(); // FROM node ID -> table name
   const incomingEdgeCount = new Map<string, number>(); // Node ID -> incoming edge count
-  
+
   // Count incoming edges for each node
   graph.edges.forEach(edge => {
     if (edge.kind === 'flow') {
@@ -41,7 +41,7 @@ export const renderDot = (graph: Graph): string => {
       incomingEdgeCount.set(edge.to.node, count + 1);
     }
   });
-  
+
   // Process FROM nodes to map them to tables
   graph.nodes.forEach(node => {
     if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
@@ -51,13 +51,13 @@ export const renderDot = (graph: Graph): string => {
       }
     }
   });
-  
+
   // Process nodes to identify operations
   graph.nodes.forEach(node => {
     if (node.kind === 'op' || node.kind === 'clause') {
       // Skip FROM nodes as they will be replaced by table nodes
       if (node.label === 'FROM') return;
-      
+
       const operation: OperationNode = {
         id: node.id,
         operation: node.label,
@@ -65,7 +65,7 @@ export const renderDot = (graph: Graph): string => {
         inputColumns: [],
         outputColumns: []
       };
-      
+
       // Try to determine input/output columns from the node context
       // This is simplified - in a real implementation, we'd track this during conversion
       if (node.label === 'SELECT') {
@@ -75,14 +75,17 @@ export const renderDot = (graph: Graph): string => {
           operation.outputColumns = columns;
         }
       }
-      
+
       operations.push(operation);
     } else if (node.kind === 'subquery') {
       // Handle subquery nodes - will be rendered as subgraphs
       // Don't add to operations list, they'll be handled separately
+    } else if (node.kind === 'relation' && !node.label.startsWith('CTE:')) {
+      // Handle non-CTE relation nodes (e.g., tables in JOIN)
+      // These will be rendered as table nodes
     }
   });
-  
+
   // Track which tables are used in JOINs
   const joinedTables = new Map<string, string>(); // table name -> JOIN node ID
   graph.nodes.forEach(node => {
@@ -93,11 +96,11 @@ export const renderDot = (graph: Graph): string => {
       }
     }
   });
-  
+
   // Track CTE nodes and their associated nodes
   const cteNodes = new Map<string, string>(); // CTE node ID -> CTE name
   const processedNodes = new Set<string>();
-  
+
   // First pass: identify CTE nodes
   graph.nodes.forEach(node => {
     if (node.kind === 'relation' && node.label.startsWith('CTE:')) {
@@ -105,37 +108,37 @@ export const renderDot = (graph: Graph): string => {
       cteNodes.set(node.id, cteName);
     }
   });
-  
+
   // Render table nodes (replacing FROM nodes)
   lines.push('  // Source tables');
-  
+
   // First, render all FROM nodes that have been mapped
   fromNodeToTable.forEach((tableKey, fromNodeId) => {
     // Skip nodes already rendered in CTE subgraphs
     if (processedNodes.has(fromNodeId)) return;
-    
+
     const tableName = tableKey.split('_')[0]; // Extract actual table name
     const table = tables.get(tableName);
     if (table) {
       // Find the FROM node to get alias information
       const fromNode = graph.nodes.find(n => n.id === fromNodeId);
       let displayName = tableName;
-      
+
       if (fromNode && fromNode.sql) {
         const aliasInfo = extractTableAndAlias(fromNode.sql);
         if (aliasInfo && aliasInfo.alias !== aliasInfo.table) {
           displayName = `${tableName} AS ${aliasInfo.alias}`;
         }
       }
-      
+
       const columns = table.columns.join('\\n');
       const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
-      const color = table.type === 'source' ? 'lightgreen' : 
+      const color = table.type === 'source' ? 'lightgreen' :
                     table.type === 'result' ? 'lightcoral' : 'lightblue';
       lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=${color}];`);
     }
   });
-  
+
   // Then render any tables that don't have FROM nodes
   tables.forEach(table => {
     // Skip CTE tables as they're rendered as subgraphs
@@ -146,7 +149,7 @@ export const renderDot = (graph: Graph): string => {
       }
     });
     if (isCTE) return;
-    
+
     // Check if this table has already been rendered as a FROM node
     let alreadyRendered = false;
     for (const tableKey of fromNodeToTable.values()) {
@@ -155,29 +158,42 @@ export const renderDot = (graph: Graph): string => {
         break;
       }
     }
-    
+
     if (!alreadyRendered) {
       const columns = table.columns.join('\\n');
       const label = columns ? buildRecordLabel(`FROM ${table.tableName}`, columns) : escapeLabelPart(`FROM ${table.tableName}`);
-      const color = table.type === 'source' ? 'lightgreen' : 
+      const color = table.type === 'source' ? 'lightgreen' :
                     table.type === 'result' ? 'lightcoral' : 'lightblue';
       lines.push(`  ${table.id} [label="${label}", style=filled, fillcolor=${color}];`);
     }
   });
-  
+
   lines.push('');
-  lines.push('  // Operations');
   
+  // Render standalone relation nodes (e.g., tables in JOIN operations)
+  graph.nodes.forEach(node => {
+    if (node.kind === 'relation' && !node.label.startsWith('CTE:')) {
+      // Skip if already processed
+      if (processedNodes.has(node.id)) return;
+      
+      // This is a table node from a JOIN operation
+      const label = escapeLabelPart(node.label);
+      lines.push(`  ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+    }
+  });
+  
+  lines.push('  // Operations');
+
   // Render CTEs as subgraphs
   cteNodes.forEach((cteName, cteNodeId) => {
     // Find all nodes that lead to this CTE node
     const cteSubgraphNodes = new Set<string>();
-    
+
     // Traverse backwards from the CTE node to find all nodes in the CTE
     const findCTENodes = (nodeId: string) => {
       if (cteSubgraphNodes.has(nodeId)) return;
       cteSubgraphNodes.add(nodeId);
-      
+
       // Find edges that lead to this node
       graph.edges.forEach(edge => {
         if (edge.to.node === nodeId && edge.kind === 'flow') {
@@ -185,14 +201,14 @@ export const renderDot = (graph: Graph): string => {
         }
       });
     };
-    
+
     // Start from edges that define the CTE
     graph.edges.forEach(edge => {
       if (edge.to.node === cteNodeId && edge.kind === 'defines') {
         findCTENodes(edge.from.node);
       }
     });
-    
+
     // Render CTE as subgraph
     if (cteSubgraphNodes.size > 0) {
       lines.push('');
@@ -201,13 +217,13 @@ export const renderDot = (graph: Graph): string => {
       lines.push('    style=filled;');
       lines.push('    color=lightblue;');
       lines.push('    node [style=filled,color=white];');
-      
+
       // Render nodes in the CTE
       cteSubgraphNodes.forEach(nodeId => {
         const node = graph.nodes.find(n => n.id === nodeId);
         if (node) {
           processedNodes.add(nodeId);
-          
+
           // Render the node based on its type
           if (node.label === 'FROM' && fromNodeToTable.has(node.id)) {
             // FROM nodes are handled separately
@@ -216,14 +232,14 @@ export const renderDot = (graph: Graph): string => {
             const table = tables.get(tableName);
             if (table) {
               let displayName = tableName;
-              
+
               if (node.sql) {
                 const aliasInfo = extractTableAndAlias(node.sql);
                 if (aliasInfo && aliasInfo.alias !== aliasInfo.table) {
                   displayName = `${tableName} AS ${aliasInfo.alias}`;
                 }
               }
-              
+
               const columns = table.columns.join('\\n');
               const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
               lines.push(`    ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
@@ -232,18 +248,18 @@ export const renderDot = (graph: Graph): string => {
             // Operation node
             const op = operations.find(op => op.id === node.id)!;
             const labelParts: string[] = [op.operation];
-            
+
             // Add SQL parameter if available (except for SELECT, UNION, and Result operations)
             if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION') && op.operation !== 'Result') {
               labelParts.push(op.sql);
             }
-            
+
             // Add output columns if available
             if (op.outputColumns.length > 0) {
               const outputCols = op.outputColumns.join('\\n');
               labelParts.push(outputCols);
             }
-            
+
             const label = buildRecordLabel(...labelParts);
             lines.push(`    ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
           } else {
@@ -252,32 +268,32 @@ export const renderDot = (graph: Graph): string => {
           }
         }
       });
-      
+
       // Render edges within the CTE
       graph.edges.forEach(edge => {
         if (cteSubgraphNodes.has(edge.from.node) && cteSubgraphNodes.has(edge.to.node) && edge.kind === 'flow') {
           lines.push(`    ${escapeId(edge.from.node)} -> ${escapeId(edge.to.node)};`);
         }
       });
-      
+
       lines.push('  }');
     }
-    
+
     // Don't render the CTE node itself as it's represented by the subgraph
     processedNodes.add(cteNodeId);
   });
-  
+
   // Render operation nodes
   operations.forEach(op => {
     // Skip JOIN operations as they'll be rendered separately with table info
     if (op.operation.includes('JOIN')) return;
-    
+
     // Skip nodes already rendered in CTE subgraphs
     if (processedNodes.has(op.id)) return;
-    
+
     // Check if this node has multiple incoming edges (schema change)
     const hasMultipleInputs = (incomingEdgeCount.get(op.id) || 0) >= 2;
-    
+
     // For nodes with multiple inputs, try to find schema information
     let schemaInfo: string[] = [];
     if (hasMultipleInputs && graph.snapshots) {
@@ -288,28 +304,28 @@ export const renderDot = (graph: Graph): string => {
         schemaInfo = snapshot.schema.columns.map(col => col.name);
       }
     }
-    
+
     const labelParts: string[] = [op.operation];
-    
+
     // Add SQL parameter if available (except for SELECT, UNION, and Result operations)
     if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION') && op.operation !== 'Result') {
       labelParts.push(op.sql);
     }
-    
+
     // Add output columns if available
     const outputCols = op.outputColumns.length > 0 ? op.outputColumns : schemaInfo;
     if (outputCols.length > 0) {
       const colsStr = outputCols.join('\\n');
       labelParts.push(colsStr);
     }
-    
+
     const label = buildRecordLabel(...labelParts);
     lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
   });
-  
+
   lines.push('');
   lines.push('  // Data flow edges');
-  
+
   // Render JOIN nodes that need to show table info
   lines.push('');
   lines.push('  // JOIN operations with table info');
@@ -317,7 +333,7 @@ export const renderDot = (graph: Graph): string => {
     if (node.kind === 'op' && node.label.includes('JOIN') && node.sql) {
       // Use the shared utility to get JOIN columns
       const schemaInfo = getJoinColumns(node, graph, tables, tableAliases);
-      
+
       const columns = schemaInfo.join('\\n');
       // Remove table name from label - just show the JOIN type
       const joinType = node.label.split(' ')[0]; // Extract just "INNER", "LEFT", etc.
@@ -325,19 +341,19 @@ export const renderDot = (graph: Graph): string => {
       lines.push(`  ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
     }
   });
-  
+
   // Render regular edges between operations
   graph.edges.forEach(edge => {
     const fromNode = graph.nodes.find(n => n.id === edge.from.node);
     const toNode = graph.nodes.find(n => n.id === edge.to.node);
-    
+
     if (fromNode && toNode && edge.kind === 'flow') {
       // Skip edges that are internal to CTE subgraphs
       let fromInCTE = false;
       let toInCTE = false;
       let fromCTEId = '';
       let toCTEId = '';
-      
+
       cteNodes.forEach((cteName, cteNodeId) => {
         // Check if this edge involves the CTE
         if (edge.from.node === cteNodeId) {
@@ -349,13 +365,13 @@ export const renderDot = (graph: Graph): string => {
           toCTEId = cteNodeId;
         }
       });
-      
+
       // Skip edges to/from FROM nodes that have been replaced
       if (fromNode.label === 'FROM' && fromNodeToTable.has(fromNode.id)) {
         // Edge is from a FROM node that's been replaced by a table node
         // The table node will use the same ID
       }
-      
+
       // Skip edges that are internal to CTE subgraphs
       let skipEdge = false;
       cteNodes.forEach((cteName, cteNodeId) => {
@@ -366,21 +382,21 @@ export const renderDot = (graph: Graph): string => {
           skipEdge = true;
         }
       });
-      
+
       if (skipEdge) return;
-      
+
       // Handle CTE connections specially
       if (fromInCTE) {
         // Find the last node in the CTE subgraph to connect from
         let lastCTENode: string | null = null;
-        
+
         // Find the node that has an edge TO the CTE node with 'defines' kind
         graph.edges.forEach(e => {
           if (e.to.node === fromCTEId && e.kind === 'defines') {
             lastCTENode = e.from.node;
           }
         });
-        
+
         if (lastCTENode) {
           lines.push(`  ${escapeId(lastCTENode)} -> ${escapeId(edge.to.node)};`);
         }
@@ -391,7 +407,7 @@ export const renderDot = (graph: Graph): string => {
       }
     }
   });
-  
+
   // Add edges from tables to their JOIN nodes
   joinedTables.forEach((joinNodeId, tableName) => {
     // Skip if this is a CTE
@@ -402,10 +418,10 @@ export const renderDot = (graph: Graph): string => {
       }
     });
     if (isCTE) return;
-    
+
     // Find the table node ID
     let tableNodeId: string | undefined;
-    
+
     // Check if it's a FROM node table
     for (const [fromId, tableKey] of fromNodeToTable.entries()) {
       const tName = tableKey.split('_')[0];
@@ -414,16 +430,16 @@ export const renderDot = (graph: Graph): string => {
         break;
       }
     }
-    
+
     // If not found in FROM nodes, use the table's own ID
     if (!tableNodeId && tables.has(tableName)) {
       tableNodeId = tables.get(tableName)!.id;
     }
-    
+
     // Add edge from table to JOIN node if not already connected
     if (tableNodeId) {
       // Check if edge already exists in the flow
-      const edgeExists = graph.edges.some(e => 
+      const edgeExists = graph.edges.some(e =>
         e.from.node === tableNodeId && e.to.node === joinNodeId && e.kind === 'flow'
       );
       if (!edgeExists) {
@@ -431,7 +447,7 @@ export const renderDot = (graph: Graph): string => {
       }
     }
   });
-  
+
   // Render subqueries as subgraphs
   graph.nodes.forEach(node => {
     if (node.kind === 'subquery') {
@@ -441,7 +457,7 @@ export const renderDot = (graph: Graph): string => {
       }
     }
   });
-  
+
   lines.push('}');
   return lines.join('\n');
 };
@@ -486,11 +502,11 @@ function buildRecordLabel(...parts: string[]): string {
 function extractColumnsFromSelectSQL(sql: string): string[] {
   // Simple extraction - in real implementation, we'd parse the SQL properly
   if (sql === '*') return ['*'];
-  
+
   // Try to extract column names from SELECT list
   const columns: string[] = [];
   const parts = sql.split(',').map(s => s.trim());
-  
+
   parts.forEach(part => {
     // Handle "column AS alias" pattern
     const asMatch = part.match(/(.+?)\s+AS\s+(\w+)/i);
@@ -513,7 +529,7 @@ function extractColumnsFromSelectSQL(sql: string): string[] {
       columns.push(cleaned);
     }
   });
-  
+
   return columns;
 }
 
@@ -523,51 +539,51 @@ function extractColumnsFromSelectSQL(sql: string): string[] {
 function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], parentGraph: Graph): void {
   const subgraphId = `cluster_${subqueryNode.id}`;
   const subqueryType = subqueryNode.subqueryType.toUpperCase();
-  const correlatedLabel = subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0 
-    ? ` (correlated: ${subqueryNode.correlatedFields.join(', ')})` 
+  const correlatedLabel = subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0
+    ? ` (correlated: ${subqueryNode.correlatedFields.join(', ')})`
     : '';
-  
+
   lines.push('');
   lines.push(`  subgraph ${subgraphId} {`);
   lines.push(`    label="${subqueryType} Subquery${correlatedLabel}";`);
   lines.push('    style=filled;');
   lines.push('    color=lightgrey;');
   lines.push('    node [style=filled,color=white];');
-  
+
   if (!subqueryNode.innerGraph) {
     lines.push('  }');
     return;
   }
-  
+
   // Recursively render the inner graph using renderDot
   const innerLines = renderDot(subqueryNode.innerGraph).split('\n');
-  
+
   // Extract only the node and edge definitions from the inner graph
   let inSubgraph = false;
   let subgraphDepth = 0;
   for (const line of innerLines) {
     const trimmedLine = line.trim();
-    
+
     // Skip the outer digraph declaration and closing brace
     if (trimmedLine.startsWith('digraph') || (trimmedLine === '}' && subgraphDepth === 0)) continue;
     if (trimmedLine.startsWith('rankdir') || trimmedLine.startsWith('node [shape')) continue;
     if (trimmedLine === '' && subgraphDepth === 0) continue;
-    
+
     // Track nested subgraph depth
     if (trimmedLine.startsWith('subgraph')) {
       subgraphDepth++;
     } else if (trimmedLine === '}' && subgraphDepth > 0) {
       subgraphDepth--;
     }
-    
+
     // Add proper indentation
     if (trimmedLine) {
       lines.push(`    ${trimmedLine}`);
     }
   }
-  
+
   lines.push('  }');
-  
+
   // Connect subquery result to parent nodes if needed
   const resultNode = findSubqueryResultNode(subqueryNode.innerGraph);
   if (resultNode) {
@@ -578,8 +594,7 @@ function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], par
       lines.push(`  ${escapeId(resultNode.id)} -> ${escapeId(edge.to.node)} [label="${resultLabel}"];`);
     }
   }
-  
+
   // Note: Edges between nested subqueries are already handled by the recursive
   // renderDot call above, so we don't need to add them again
 }
-

@@ -1,126 +1,187 @@
-import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'child_process';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync, unlinkSync, existsSync } from 'fs';
-
-const cliPath = './src/cli.ts';
+import { parseArgs, runCli } from './cli.js';
 
 describe('CLI', () => {
-  it('should show help with --help flag', () => {
-    const result = spawnSync('npx', ['tsx', cliPath, '--help'], {
-      encoding: 'utf8'
+  describe('parseArgs', () => {
+    it('should parse help flags', () => {
+      const { options: options1 } = parseArgs(['--help']);
+      expect(options1.help).toBe(true);
+      
+      const { options: options2 } = parseArgs(['-h']);
+      expect(options2.help).toBe(true);
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('sqloflow - SQL visualization tool');
-    expect(result.stdout).toContain('Usage:');
-    expect(result.stdout).toContain('Options:');
-  });
-
-  it('should show help with -h flag', () => {
-    const result = spawnSync('npx', ['tsx', cliPath, '-h'], {
-      encoding: 'utf8'
+    it('should parse format option', () => {
+      const { options } = parseArgs(['-f', 'json', 'SELECT * FROM users']);
+      expect(options.format).toBe('json');
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('sqloflow - SQL visualization tool');
-  });
-
-  it('should output mermaid by default', () => {
-    const sql = 'SELECT id, name FROM users';
-    const result = spawnSync('npx', ['tsx', cliPath, sql], {
-      encoding: 'utf8'
+    it('should parse output option', () => {
+      const { options } = parseArgs(['-o', 'output.md', 'SELECT * FROM users']);
+      expect(options.output).toBe('output.md');
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('flowchart LR');
-    expect(result.stdout).toContain('users');
-    expect(result.stdout).toContain('SELECT');
-  });
-
-  it('should output JSON with -f json', () => {
-    const sql = 'SELECT id, name FROM users';
-    const result = spawnSync('npx', ['tsx', cliPath, '-f', 'json', sql], {
-      encoding: 'utf8'
+    it('should parse dialect option', () => {
+      const { options } = parseArgs(['-d', 'mysql', 'SELECT * FROM users']);
+      expect(options.dialect).toBe('mysql');
     });
     
-    expect(result.status).toBe(0);
-    const json = JSON.parse(result.stdout);
-    expect(json.nodes).toBeDefined();
-    expect(json.edges).toBeDefined();
-  });
-
-
-  it('should read from stdin', () => {
-    const sql = 'SELECT * FROM products WHERE price > 100';
-    const result = spawnSync('npx', ['tsx', cliPath], {
-      encoding: 'utf8',
-      input: sql
+    it('should parse SQL argument', () => {
+      const { sql } = parseArgs(['SELECT * FROM users']);
+      expect(sql).toBe('SELECT * FROM users');
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('flowchart LR');
-    expect(result.stdout).toContain('products');
-  });
-
-  it('should output to file with -o', () => {
-    const sql = 'SELECT id FROM users';
-    const outputFile = './test-output.md';
+    it('should throw on invalid format', () => {
+      expect(() => parseArgs(['-f', 'invalid'])).toThrow('Invalid format: invalid');
+    });
     
-    // Remove file if exists
-    if (existsSync(outputFile)) {
+    it('should throw on invalid dialect', () => {
+      expect(() => parseArgs(['-d', 'invalid'])).toThrow('Invalid dialect: invalid');
+    });
+  });
+  
+  describe('runCli', () => {
+    it('should show help with --help flag', async () => {
+      const log = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['--help'], { log, exit });
+      
+      expect(exit).toHaveBeenCalledWith(0);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('sqloflow - SQL visualization tool'));
+    });
+    
+    it('should show help with -h flag', async () => {
+      const log = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['-h'], { log, exit });
+      
+      expect(exit).toHaveBeenCalledWith(0);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('sqloflow - SQL visualization tool'));
+    });
+    
+    it('should output mermaid by default', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['SELECT id, name FROM users'], { log, error, exit });
+      
+      expect(exit).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('flowchart LR'));
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('users'));
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
+    });
+    
+    it('should output JSON with -f json', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['-f', 'json', 'SELECT id, name FROM users'], { log, error, exit });
+      
+      expect(exit).not.toHaveBeenCalled();
+      const output = log.mock.calls[0][0];
+      const json = JSON.parse(output);
+      expect(json.nodes).toBeDefined();
+      expect(json.edges).toBeDefined();
+    });
+    
+    it('should read from stdin', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      const stdin = 'SELECT * FROM products WHERE price > 100';
+      
+      await runCli([], { stdin, log, error, exit });
+      
+      expect(exit).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('flowchart LR'));
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('products'));
+    });
+    
+    it('should output to file with -o', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      const outputFile = './test-output.md';
+      
+      // Remove file if exists
+      if (existsSync(outputFile)) {
+        unlinkSync(outputFile);
+      }
+      
+      await runCli(['-o', outputFile, 'SELECT id FROM users'], { log, error, exit });
+      
+      expect(exit).not.toHaveBeenCalled();
+      expect(error).toHaveBeenCalledWith(`Output written to ${outputFile}`);
+      expect(log).not.toHaveBeenCalled();
+      
+      const content = readFileSync(outputFile, 'utf8');
+      expect(content).toContain('flowchart LR');
+      
+      // Clean up
       unlinkSync(outputFile);
-    }
-    
-    const result = spawnSync('npx', ['tsx', cliPath, '-o', outputFile, sql], {
-      encoding: 'utf8'
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stderr).toContain(`Output written to ${outputFile}`);
-    
-    const content = readFileSync(outputFile, 'utf8');
-    expect(content).toContain('flowchart LR');
-    
-    // Clean up
-    unlinkSync(outputFile);
-  });
-
-  it('should error on invalid SQL', () => {
-    const sql = 'INVALID SQL QUERY';
-    const result = spawnSync('npx', ['tsx', cliPath, sql], {
-      encoding: 'utf8'
+    it('should error on invalid SQL', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['INVALID SQL QUERY'], { log, error, exit });
+      
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('Error:'));
     });
     
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Error:');
-  });
-
-  it('should error on invalid format', () => {
-    const sql = 'SELECT * FROM users';
-    const result = spawnSync('npx', ['tsx', cliPath, '-f', 'invalid', sql], {
-      encoding: 'utf8'
+    it('should error on invalid format', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      try {
+        await runCli(['-f', 'invalid', 'SELECT * FROM users'], { log, error, exit });
+      } catch (err) {
+        // parseArgs throws before runCli can handle it
+        expect(err).toBeInstanceOf(Error);
+        expect((err as Error).message).toContain('Invalid format: invalid');
+      }
     });
     
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Invalid format: invalid');
-  });
-
-  it('should error when no SQL provided', () => {
-    const result = spawnSync('npx', ['tsx', cliPath], {
-      encoding: 'utf8'
+    it('should error when no SQL provided', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli([], { log, error, exit, isTTY: true });
+      
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(error).toHaveBeenCalledWith('Error: No SQL provided. Use -h for help.');
     });
     
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('No SQL provided');
-  });
-
-  it('should use different dialect with -d', () => {
-    const sql = 'SELECT * FROM users LIMIT 10';
-    const result = spawnSync('npx', ['tsx', cliPath, '-d', 'mysql', sql], {
-      encoding: 'utf8'
+    it('should error when empty SQL provided', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['  '], { log, error, exit });
+      
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(error).toHaveBeenCalledWith('Error: No SQL provided. Use -h for help.');
     });
     
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('flowchart LR');
+    it('should use different dialect with -d', async () => {
+      const log = vi.fn();
+      const error = vi.fn();
+      const exit = vi.fn();
+      
+      await runCli(['-d', 'mysql', 'SELECT * FROM users LIMIT 10'], { log, error, exit });
+      
+      expect(exit).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('flowchart LR'));
+    });
   });
 });

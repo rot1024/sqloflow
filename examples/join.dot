@@ -4,20 +4,20 @@ digraph schema_flow {
 
   // Source tables
   node_0 [label="FROM users AS u|id\nname", style=filled, fillcolor=lightgreen];
-  table_orders [label="FROM orders|user_id\ntotal", style=filled, fillcolor=lightgreen];
 
+  node_1 [label="orders AS o", style=filled, fillcolor=lightgreen];
   // Operations
-  node_2 [label="WHERE|o.total \> 100", style=filled, fillcolor=lightyellow];
-  node_3 [label="SELECT|u.name\no.total", style=filled, fillcolor=lightyellow];
-  node_4 [label="ORDER BY|o.total DESC", style=filled, fillcolor=lightyellow];
+  node_3 [label="WHERE|o.total \> 100", style=filled, fillcolor=lightyellow];
+  node_4 [label="SELECT|u.name\no.total", style=filled, fillcolor=lightyellow];
+  node_5 [label="ORDER BY|o.total DESC", style=filled, fillcolor=lightyellow];
 
   // Data flow edges
 
   // JOIN operations with table info
-  node_1 [label="INNER JOIN|users.id\nusers.name\norders.user_id\norders.total", style=filled, fillcolor=lightyellow];
-  node_0 -> node_1;
+  node_2 [label="INNER JOIN|users.id\nusers.name", style=filled, fillcolor=lightyellow];
+  node_0 -> node_2;
   node_1 -> node_2;
   node_2 -> node_3;
   node_3 -> node_4;
-  table_orders -> node_1;
+  node_4 -> node_5;
 }

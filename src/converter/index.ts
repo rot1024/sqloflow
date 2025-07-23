@@ -2,7 +2,7 @@ import type { Graph, Node, Edge } from '../types/ir.js';
 import type { AST } from 'node-sql-parser';
 import { extractSchema } from './schema-extractor.js';
 import { createContext } from './context.js';
-import { convertStatement } from './statement-converters.js';
+import { convertStatement } from './statement.js';
 
 export const convert = (ast: AST[]): Graph => {
   // First extract schema from CREATE TABLE statements

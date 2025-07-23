@@ -1,10 +1,12 @@
 flowchart LR
     node_0["FROM<br/>---<br/>users.id<br/>users.name"]
-    node_1["INNER JOIN<br/>---<br/>users.id<br/>users.name<br/>orders.user_id<br/>orders.total"]
-    node_2["WHERE<br/>---<br/>o.total &gt; 100"]
-    node_3["SELECT<br/>---<br/>u.u.name<br/>o.o.total"]
-    node_4["ORDER BY o.total DESC"]
-    node_0 --> node_1
+    node_1[orders AS o]
+    node_2["INNER JOIN<br/>---<br/>users.id<br/>users.name"]
+    node_3["WHERE<br/>---<br/>o.total &gt; 100"]
+    node_4["SELECT<br/>---<br/>u.u.name<br/>o.o.total"]
+    node_5["ORDER BY o.total DESC"]
+    node_0 --> node_2
     node_1 --> node_2
     node_2 --> node_3
     node_3 --> node_4
+    node_4 --> node_5

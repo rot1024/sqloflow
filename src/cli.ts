@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { parse, convert, render } from './index.js';
 import type { RenderOptions, Dialect } from './index.js';
 import { ParseError, ConversionError, RenderError } from './errors.js';
@@ -12,8 +12,7 @@ interface CliOptions {
   help: boolean;
 }
 
-const showHelp = () => {
-  console.log(`
+export const getHelpText = () => `
 sqloflow - SQL visualization tool
 
 Usage:
@@ -39,10 +38,13 @@ Examples:
   
   # Use different SQL dialect
   sqloflow -d mysql "SELECT * FROM users"
-`);
+`;
+
+export const showHelp = () => {
+  console.log(getHelpText());
 };
 
-const parseArgs = (args: string[]): { options: CliOptions; sql?: string } => {
+export const parseArgs = (args: string[]): { options: CliOptions; sql?: string } => {
   const options: CliOptions = {
     format: 'mermaid',
     dialect: 'postgresql',
@@ -94,7 +96,7 @@ const parseArgs = (args: string[]): { options: CliOptions; sql?: string } => {
   return { options, sql };
 };
 
-const readStdin = async (): Promise<string> => {
+export const readStdin = async (): Promise<string> => {
   const chunks: Buffer[] = [];
   
   return new Promise((resolve, reject) => {
@@ -104,67 +106,88 @@ const readStdin = async (): Promise<string> => {
   });
 };
 
-const main = async () => {
+export const runCli = async (args: string[], options?: {
+  stdin?: string;
+  exit?: (code: number) => void;
+  log?: (message: string) => void;
+  error?: (message: string) => void;
+  isTTY?: boolean;
+}) => {
+  const {
+    stdin,
+    exit = process.exit,
+    log = console.log,
+    error = console.error,
+    isTTY = process.stdin.isTTY
+  } = options || {};
+
   try {
-    const args = process.argv.slice(2);
-    const { options, sql: argSql } = parseArgs(args);
+    const { options: cliOptions, sql: argSql } = parseArgs(args);
     
-    if (options.help) {
-      showHelp();
-      process.exit(0);
+    if (cliOptions.help) {
+      log(getHelpText());
+      exit(0);
+      return;
     }
     
     // Get SQL (from argument or stdin)
     let sql: string;
     if (argSql) {
       sql = argSql;
-    } else if (!process.stdin.isTTY) {
+    } else if (stdin !== undefined) {
+      sql = stdin;
+    } else if (!isTTY) {
       sql = await readStdin();
     } else {
-      console.error('Error: No SQL provided. Use -h for help.');
-      process.exit(1);
+      error('Error: No SQL provided. Use -h for help.');
+      exit(1);
+      return;
     }
     
     // 空文字列チェック
     const trimmedSql = sql.trim();
     if (!trimmedSql) {
-      console.error('Error: No SQL provided. Use -h for help.');
-      process.exit(1);
+      error('Error: No SQL provided. Use -h for help.');
+      exit(1);
+      return;
     }
     
     // Process SQL
-    const ast = parse(trimmedSql, options.dialect);
+    const ast = parse(trimmedSql, cliOptions.dialect);
     const ir = convert(ast);
     
     const renderOptions: RenderOptions = {
-      format: options.format
+      format: cliOptions.format
     };
     
     const result = render(ir, renderOptions);
     
     // Output
-    if (options.output) {
-      writeFileSync(options.output, result, 'utf-8');
-      console.error(`Output written to ${options.output}`);
+    if (cliOptions.output) {
+      writeFileSync(cliOptions.output, result, 'utf-8');
+      error(`Output written to ${cliOptions.output}`);
     } else {
-      console.log(result);
+      log(result);
     }
     
-  } catch (error) {
-    if (error instanceof ParseError) {
-      console.error('Parse Error:', error.message);
+  } catch (err) {
+    if (err instanceof ParseError) {
+      error('Parse Error: ' + err.message);
       if (process.env.DEBUG) {
-        console.error('SQL:', error.sql);
+        error('SQL: ' + err.sql);
       }
-    } else if (error instanceof ConversionError) {
-      console.error('Conversion Error:', error.message);
-    } else if (error instanceof RenderError) {
-      console.error('Render Error:', error.message);
+    } else if (err instanceof ConversionError) {
+      error('Conversion Error: ' + err.message);
+    } else if (err instanceof RenderError) {
+      error('Render Error: ' + err.message);
     } else {
-      console.error('Error:', error instanceof Error ? error.message : String(error));
+      error('Error: ' + (err instanceof Error ? err.message : String(err)));
     }
-    process.exit(1);
+    exit(1);
   }
 };
 
-main();
+// Only run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runCli(process.argv.slice(2));
+}

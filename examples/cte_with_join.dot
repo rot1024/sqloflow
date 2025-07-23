@@ -6,6 +6,7 @@ digraph schema_flow {
   node_0 [label="FROM orders|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
   node_5 [label="FROM orders AS o|customer_id\ntotal_amount\nid", style=filled, fillcolor=lightgreen];
 
+  node_6 [label="recent_max AS r", style=filled, fillcolor=lightgreen];
   // Operations
 
   subgraph cluster_node_4 {
@@ -21,15 +22,16 @@ digraph schema_flow {
     node_1 -> node_2;
     node_2 -> node_3;
   }
-  node_7 [label="WHERE|o.total_amount = r.max_total", style=filled, fillcolor=lightyellow];
-  node_8 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
+  node_8 [label="WHERE|o.total_amount = r.max_total", style=filled, fillcolor=lightyellow];
+  node_9 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
 
   // Data flow edges
 
   // JOIN operations with table info
-  node_6 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id\nrecent_max.customer_id\nrecent_max.max_total", style=filled, fillcolor=lightyellow];
-  node_5 -> node_6;
-  node_3 -> node_6;
+  node_7 [label="INNER JOIN|orders.customer_id\norders.total_amount\norders.id", style=filled, fillcolor=lightyellow];
+  node_5 -> node_7;
   node_6 -> node_7;
+  node_3 -> node_6;
   node_7 -> node_8;
+  node_8 -> node_9;
 }

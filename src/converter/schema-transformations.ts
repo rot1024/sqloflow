@@ -1,6 +1,6 @@
 import type { ConversionContext } from './types.js';
 import type { SchemaSnapshot, ColumnSchema } from '../types/ir.js';
-import type { Column, ExpressionValue, ColumnRef, Binary, Function as FunctionExpr, AggrFunc, Select } from 'node-sql-parser';
+import type { Column, ExpressionValue, ColumnRef, Select } from 'node-sql-parser';
 import { getColumnName } from './helpers.js';
 
 export const createSnapshot = (ctx: ConversionContext, nodeId: string): void => {

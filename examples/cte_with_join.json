@@ -38,18 +38,24 @@
     },
     {
       "id": "node_6",
-      "kind": "op",
-      "label": "INNER JOIN",
-      "sql": "recent_max AS r ON r.customer_id = o.customer_id"
+      "kind": "relation",
+      "label": "recent_max AS r",
+      "sql": "recent_max AS r"
     },
     {
       "id": "node_7",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "INNER JOIN ON r.customer_id = o.customer_id"
+    },
+    {
+      "id": "node_8",
       "kind": "clause",
       "label": "WHERE",
       "sql": "o.total_amount = r.max_total"
     },
     {
-      "id": "node_8",
+      "id": "node_9",
       "kind": "op",
       "label": "SELECT",
       "sql": "o.id, o.total_amount"
@@ -103,27 +109,27 @@
         "node": "node_5"
       },
       "to": {
-        "node": "node_6"
+        "node": "node_7"
       }
     },
     {
       "id": "edge_5",
       "kind": "flow",
       "from": {
-        "node": "node_4"
+        "node": "node_6"
       },
       "to": {
-        "node": "node_6"
+        "node": "node_7"
       }
     },
     {
       "id": "edge_6",
       "kind": "flow",
       "from": {
-        "node": "node_6"
+        "node": "node_4"
       },
       "to": {
-        "node": "node_7"
+        "node": "node_6"
       }
     },
     {
@@ -134,6 +140,16 @@
       },
       "to": {
         "node": "node_8"
+      }
+    },
+    {
+      "id": "edge_8",
+      "kind": "flow",
+      "from": {
+        "node": "node_8"
+      },
+      "to": {
+        "node": "node_9"
       }
     }
   ],
@@ -189,7 +205,7 @@
       }
     },
     {
-      "nodeId": "node_6",
+      "nodeId": "node_7",
       "schema": {
         "columns": [
           {
@@ -217,7 +233,7 @@
       }
     },
     {
-      "nodeId": "node_7",
+      "nodeId": "node_8",
       "schema": {
         "columns": [
           {
@@ -251,7 +267,7 @@
       }
     },
     {
-      "nodeId": "node_8",
+      "nodeId": "node_9",
       "schema": {
         "columns": [
           {

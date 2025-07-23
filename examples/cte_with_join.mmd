@@ -11,11 +11,12 @@ flowchart LR
     end
 
     node_5["FROM<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
-    node_6["INNER JOIN<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id<br/>recent_max.customer_id<br/>recent_max.max_total"]
-    node_7["WHERE<br/>---<br/>o.total_amount = r.max_total"]
-    node_8["SELECT<br/>---<br/>o.o.id<br/>o.o.total_amount"]
-    node_3 -->|CTE result| node_4
-    node_5 --> node_6
-    node_4 --> node_6
+    node_6[recent_max AS r]
+    node_7["INNER JOIN<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
+    node_8["WHERE<br/>---<br/>o.total_amount = r.max_total"]
+    node_9["SELECT<br/>---<br/>o.o.id<br/>o.o.total_amount"]
+    node_3 -->|CTE result| node_6
+    node_5 --> node_7
     node_6 --> node_7
     node_7 --> node_8
+    node_8 --> node_9

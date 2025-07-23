@@ -19,7 +19,3 @@ export const parse = (sql: string, dialect: Dialect = 'postgresql') => {
     throw new ParseError(`Failed to parse SQL: ${message}`, sql);
   }
 };
-
-export const toSQL = (ast: AST[], dialect: Dialect = 'postgresql') => {
-  return parser.sqlify(ast, { database: dialect });
-};

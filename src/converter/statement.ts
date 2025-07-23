@@ -9,15 +9,7 @@ import type {
   Insert_Replace,
   From,
   With,
-  Column,
-  OrderBy,
-  Limit,
-  ExpressionValue,
-  Binary,
-  BaseFrom,
-  Join,
-  TableExpr,
-  Dual
+  Join
 } from 'node-sql-parser';
 import type { TableRef } from '../types/sql-parser.js';
 import {
@@ -42,7 +34,7 @@ import {
   applyUnionTransformation,
   inferColumnsFromExpression
 } from './schema-transformations.js';
-import { convertSubquery } from './subquery-converter.js';
+import { convertSubquery } from './subquery.js';
 
 // Type guard for Select statements (used in CTE processing)
 function isSelect(stmt: AST): stmt is Select {
@@ -97,10 +89,10 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
   if (stmt.where) {
     const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where));
     nodes.push(whereNode);
-    
+
     // Set current node ID before inferring columns
     ctx.currentNodeId = whereNode.id;
-    
+
     // Infer columns from WHERE expression
     inferColumnsFromExpression(ctx, stmt.where);
 
@@ -131,7 +123,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
       edges.push(createEdge(ctx, 'flow', lastNodeId, groupByNode.id));
     }
     lastNodeId = groupByNode.id;
-    
+
     // Set current node ID
     ctx.currentNodeId = groupByNode.id;
 
@@ -158,7 +150,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     edges.push(createEdge(ctx, 'flow', lastNodeId, selectNode.id));
   }
   lastNodeId = selectNode.id;
-  
+
   // Set current node ID
   ctx.currentNodeId = selectNode.id;
 
@@ -216,7 +208,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
 
     // Track the UNION node as the last node
     lastNodeId = unionNode.id;
-    
+
     // Apply UNION transformation to merge schemas
     applyUnionTransformation(ctx, unionNode.id);
   }
@@ -239,15 +231,15 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
       const fromNode = createNode(ctx, 'op', 'FROM', `FROM ${getTableLabel(table)}`);
       nodes.push(fromNode);
       rootNodeId = fromNode.id;
-      
+
       // Set current node ID
       ctx.currentNodeId = fromNode.id;
-      
+
       // Track that this node introduced this table alias
       if (ctx.tableSourceNodes) {
         ctx.tableSourceNodes[tableAlias] = fromNode.id;
       }
-      
+
       // Check if this is a CTE reference
       if (ctx.cteNodes && ctx.cteNodes[tableName]) {
         // Connect the CTE node to this FROM node
@@ -293,25 +285,36 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
       // Handle JOINs
       if ('join' in table) {
         const joinType = table.join || 'INNER JOIN';
-        const joinNode = createNode(ctx, 'op', joinType, joinToSQL(table));
+        
+        // Create a separate table node for the joined table
+        const tableLabel = getTableLabel(table);
+        const tableNode = createNode(ctx, 'relation', tableLabel, tableLabel);
+        nodes.push(tableNode);
+        
+        // Create the JOIN operation node (without table info in label)
+        const joinNode = createNode(ctx, 'op', joinType, `${joinType}${table.on ? ` ON ${expressionToSQL(table.on)}` : ''}`);
         nodes.push(joinNode);
 
-        // Only connect from the previous node (no separate table node)
+        // Connect: previous node -> JOIN node
         edges.push(createEdge(ctx, 'flow', rootNodeId, joinNode.id));
-        rootNodeId = joinNode.id;
         
+        // Connect: table node -> JOIN node
+        edges.push(createEdge(ctx, 'flow', tableNode.id, joinNode.id));
+        
+        rootNodeId = joinNode.id;
+
         // Set current node ID
         ctx.currentNodeId = joinNode.id;
-        
+
         // Track that this node introduced this table alias
         if (ctx.tableSourceNodes) {
-          ctx.tableSourceNodes[tableAlias] = joinNode.id;
+          ctx.tableSourceNodes[tableAlias] = tableNode.id;
         }
-        
+
         // Check if this is a CTE reference
         if (ctx.cteNodes && ctx.cteNodes[tableName]) {
-          // Connect the CTE node to this JOIN node
-          edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], joinNode.id));
+          // Connect the CTE node to the table node instead of JOIN node
+          edges.push(createEdge(ctx, 'flow', ctx.cteNodes[tableName], tableNode.id));
         }
 
         // Schema information is now tracked via snapshots instead of column nodes
@@ -379,18 +382,18 @@ const convertCTE = (ctx: ConversionContext, cte: With): { nodes: Node[]; edges: 
       const lastNode = cteResult.nodes[cteResult.nodes.length - 1];
       edges.push(createEdge(ctx, 'defines', lastNode.id, cteNode.id));
     }
-    
+
     // Track the CTE node for later reference
     if (ctx.cteNodes) {
       ctx.cteNodes[cteName] = cteNode.id;
     }
-    
+
     // Add CTE to current schema with the output columns from the SELECT
     if (cteResult.nodes.length > 0) {
       // Get the columns from the last snapshot of the CTE
       const lastNode = cteResult.nodes[cteResult.nodes.length - 1];
       const lastSnapshot = ctx.snapshots.find(s => s.nodeId === lastNode.id);
-      
+
       if (lastSnapshot) {
         // Create CTE columns based on the output columns
         const columnsList = lastSnapshot.schema.columns.map(col => ({
@@ -401,7 +404,7 @@ const convertCTE = (ctx: ConversionContext, cte: With): { nodes: Node[]; edges: 
           table: cteName,
           sourceNodeId: cteNode.id
         }));
-        
+
         // Add CTE to current relations
         ctx.currentRelations[cteName] = {
           name: cteName,
