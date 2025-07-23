@@ -54,14 +54,14 @@ export const getTableName = (table: TableLike): string => {
   return 'unknown';
 };
 
-export const expressionToSQL = (expr: any): string => {
+export const expressionToSQL = (expr: any, ctx?: ConversionContext): string => {
   if (!expr) return '';
 
   try {
     switch (expr.type) {
     case 'binary_expr':
-      const left = expressionToSQL(expr.left);
-      const right = expressionToSQL(expr.right);
+      const left = expressionToSQL(expr.left, ctx);
+      const right = expressionToSQL(expr.right, ctx);
       return `${left} ${expr.operator} ${right}`;
 
     case 'column_ref':
@@ -104,58 +104,70 @@ export const expressionToSQL = (expr: any): string => {
         if (funcName === 'EXISTS' && expr.args.type === 'expr_list' && expr.args.value?.[0]?.ast) {
           args = '...';
         } else if (Array.isArray(expr.args)) {
-          args = expr.args.map((a: Expression) => expressionToSQL(a)).join(', ');
+          args = expr.args.map((a: Expression) => expressionToSQL(a, ctx)).join(', ');
         } else if (expr.args.expr) {
           // Handle args wrapped in expr property (common for aggr_func)
-          args = expressionToSQL(expr.args.expr);
+          args = expressionToSQL(expr.args.expr, ctx);
         } else {
-          args = expressionToSQL(expr.args);
+          args = expressionToSQL(expr.args, ctx);
         }
       }
       return `${funcName}(${args})`;
 
     case 'expr_list':
-      return expr.value.map((e: Expression) => expressionToSQL(e)).join(', ');
+      return expr.value.map((e: any) => {
+        // If this is a subquery wrapped in expr_list, handle it specially
+        if (e.ast && ctx && ctx.placeholderMap && ctx.placeholderCounter !== undefined) {
+          let placeholder = ctx.placeholderMap.get(e.ast);
+          if (!placeholder) {
+            placeholder = `expr${ctx.placeholderCounter > 1 ? ctx.placeholderCounter : ''}`;
+            ctx.placeholderMap.set(e.ast, placeholder);
+            ctx.placeholderCounter++;
+          }
+          return placeholder;
+        }
+        return expressionToSQL(e, ctx);
+      }).join(', ');
 
     case 'case':
       let caseStr = 'CASE';
-      if (expr.expr) caseStr += ` ${expressionToSQL(expr.expr)}`;
+      if (expr.expr) caseStr += ` ${expressionToSQL(expr.expr, ctx)}`;
       if (expr.when) {
         expr.when.forEach((w: { when: Expression; then: Expression }) => {
-          caseStr += ` WHEN ${expressionToSQL(w.when)} THEN ${expressionToSQL(w.then)}`;
+          caseStr += ` WHEN ${expressionToSQL(w.when, ctx)} THEN ${expressionToSQL(w.then, ctx)}`;
         });
       }
-      if (expr.else) caseStr += ` ELSE ${expressionToSQL(expr.else)}`;
+      if (expr.else) caseStr += ` ELSE ${expressionToSQL(expr.else, ctx)}`;
       caseStr += ' END';
       return caseStr;
 
     case 'in':
     case 'not_in':
-      const inExpr = expressionToSQL(expr.left);
-      const inList = expr.right.map((r: Expression) => expressionToSQL(r)).join(', ');
+      const inExpr = expressionToSQL(expr.left, ctx);
+      const inList = expr.right.map((r: Expression) => expressionToSQL(r, ctx)).join(', ');
       return `${inExpr} ${expr.type === 'not_in' ? 'NOT IN' : 'IN'} (${inList})`;
 
     case 'between':
     case 'not_between':
-      const betweenExpr = expressionToSQL(expr.left);
-      const lower = expressionToSQL(expr.right.left);
-      const upper = expressionToSQL(expr.right.right);
+      const betweenExpr = expressionToSQL(expr.left, ctx);
+      const lower = expressionToSQL(expr.right.left, ctx);
+      const upper = expressionToSQL(expr.right.right, ctx);
       return `${betweenExpr} ${expr.type === 'not_between' ? 'NOT BETWEEN' : 'BETWEEN'} ${lower} AND ${upper}`;
 
     case 'is':
     case 'is_not':
-      const isExpr = expressionToSQL(expr.left);
-      const isValue = expressionToSQL(expr.right);
+      const isExpr = expressionToSQL(expr.left, ctx);
+      const isValue = expressionToSQL(expr.right, ctx);
       return `${isExpr} ${expr.type === 'is_not' ? 'IS NOT' : 'IS'} ${isValue}`;
 
     case 'like':
     case 'not_like':
-      const likeExpr = expressionToSQL(expr.left);
-      const pattern = expressionToSQL(expr.right);
+      const likeExpr = expressionToSQL(expr.left, ctx);
+      const pattern = expressionToSQL(expr.right, ctx);
       return `${likeExpr} ${expr.type === 'not_like' ? 'NOT LIKE' : 'LIKE'} ${pattern}`;
 
     case 'unary_expr':
-      return `${expr.operator}${expressionToSQL(expr.expr)}`;
+      return `${expr.operator}${expressionToSQL(expr.expr, ctx)}`;
 
     case 'interval':
       // Handle INTERVAL expressions from node-sql-parser
@@ -172,6 +184,15 @@ export const expressionToSQL = (expr: any): string => {
 
     case 'select':
       // For subqueries, return a placeholder
+      if (ctx && ctx.placeholderMap && ctx.placeholderCounter !== undefined) {
+        let placeholder = ctx.placeholderMap.get(expr);
+        if (!placeholder) {
+          placeholder = `expr${ctx.placeholderCounter > 1 ? ctx.placeholderCounter : ''}`;
+          ctx.placeholderMap.set(expr, placeholder);
+          ctx.placeholderCounter++;
+        }
+        return placeholder;
+      }
       return '(subquery)';
 
     case 'exists':
@@ -193,7 +214,7 @@ export const expressionToSQL = (expr: any): string => {
 export const selectListToSQL = (columns: Column[]): string => {
   return columns.map(col => {
     if (col.expr) {
-      const exprStr = expressionToSQL(col.expr);
+      const exprStr = expressionToSQL(col.expr, undefined);
       const alias = typeof col.as === 'string' ? col.as : col.as?.value;
       return alias ? `${exprStr} AS ${alias}` : exprStr;
     }
@@ -220,7 +241,7 @@ export const groupByToSQL = (groupby: Select['groupby'] | null): string => {
       if (g.type === 'column_ref') {
         return getColumnName(g);
       }
-      return expressionToSQL(g) || 'expr';
+      return expressionToSQL(g, undefined) || 'expr';
     }).join(', ');
   }
   return '';
@@ -228,7 +249,7 @@ export const groupByToSQL = (groupby: Select['groupby'] | null): string => {
 
 export const orderByToSQL = (orderby: OrderBy[]): string => {
   return orderby.map(o => {
-    const expr = o.expr ? expressionToSQL(o.expr) : 'expr';
+    const expr = o.expr ? expressionToSQL(o.expr, undefined) : 'expr';
     const direction = o.type || 'ASC';
     return `${expr} ${direction}`;
   }).join(', ');
@@ -253,7 +274,7 @@ export const tableToSQL = (table: TableLike): string => {
 
 export const joinToSQL = (table: Join): string => {
   const tableName = getTableLabel(table);
-  const onClause = table.on ? ` ON ${expressionToSQL(table.on)}` : '';
+  const onClause = table.on ? ` ON ${expressionToSQL(table.on, undefined)}` : '';
   return `${tableName}${onClause}`;
 };
 
@@ -289,6 +310,11 @@ export const detectSubqueryInExpression = (expr: any): { hasSubquery: boolean; s
       // Check if right side is a direct subquery (scalar subquery)
       if (expr.right?.ast) {
         return { hasSubquery: true, subqueryType: 'scalar', ast: expr.right.ast };
+      }
+      
+      // Check if right side is directly a select statement (scalar subquery)
+      if (expr.right?.type === 'select') {
+        return { hasSubquery: true, subqueryType: 'scalar', ast: expr.right };
       }
       
       // Recursively check both sides

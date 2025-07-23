@@ -8,13 +8,13 @@ digraph schema_flow {
   node_1 [label="orders AS o", style=filled, fillcolor=lightgreen];
   // Operations
   node_3 [label="WHERE|o.total \> 100", style=filled, fillcolor=lightyellow];
-  node_4 [label="SELECT|u.name\no.total", style=filled, fillcolor=lightyellow];
+  node_4 [label="SELECT|u.name\no.total", style=filled, fillcolor=salmon];
   node_5 [label="ORDER BY|o.total DESC", style=filled, fillcolor=lightyellow];
 
   // Data flow edges
 
   // JOIN operations with table info
-  node_2 [label="INNER JOIN|users.id\nusers.name", style=filled, fillcolor=lightyellow];
+  node_2 [label="INNER JOIN|u.id\nu.name|ON u.id = o.user_id", style=filled, fillcolor=salmon];
   node_0 -> node_2;
   node_1 -> node_2;
   node_2 -> node_3;

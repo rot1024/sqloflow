@@ -7,7 +7,7 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|o.total_amount = expr", style=filled, fillcolor=lightyellow];
-  node_3 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|o.id\no.total_amount", style=filled, fillcolor=salmon];
 
   // Data flow edges
 
@@ -19,16 +19,15 @@ digraph schema_flow {
     label="SCALAR Subquery (correlated: o.customer_id)";
     style=filled;
     color=lightgrey;
-    node [style=filled,color=white];
     // Source tables
     subq_0_node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
     // Operations
     subq_0_node_1 [label="WHERE|customer_id = o.customer_id", style=filled, fillcolor=lightyellow];
-    subq_0_node_2 [label="SELECT|MAX(total_amount)", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|MAX(total_amount)", style=filled, fillcolor=salmon];
     // Data flow edges
     // JOIN operations with table info
     subq_0_node_0 -> subq_0_node_1;
     subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [label="1 row, 1 col"];
+  subq_0_node_2 -> node_1 [label="expr"];
 }

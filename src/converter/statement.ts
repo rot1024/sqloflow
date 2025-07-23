@@ -34,7 +34,7 @@ import {
   applyUnionTransformation,
   inferColumnsFromExpression
 } from './schema-transformations.js';
-import { convertSubquery } from './subquery.js';
+import { convertSubquery, getSubqueryResultLabel } from './subquery.js';
 
 // Type guard for Select statements (used in CTE processing)
 function isSelect(stmt: AST): stmt is Select {
@@ -87,7 +87,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
 
   // WHERE clause
   if (stmt.where) {
-    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where));
+    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where, ctx));
     nodes.push(whereNode);
 
     // Set current node ID before inferring columns
@@ -106,8 +106,38 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
     if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
       const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType, parentTableRefs);
       nodes.push(subqueryNode);
-      // Connect subquery to WHERE clause
-      edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, whereNode.id));
+      
+      // Get the placeholder name from the map
+      let edgeLabel = getSubqueryResultLabel(subqueryInfo.subqueryType); // default based on type
+      
+      // For better consistency, if the WHERE clause contains "expr", use "expr" as the label
+      if (whereNode.sql && whereNode.sql.includes('expr')) {
+        // Count how many "expr" are already in the WHERE clause to determine the placeholder number
+        const existingExprs = (whereNode.sql.match(/expr\d*/g) || []).length;
+        if (existingExprs === 1) {
+          edgeLabel = 'expr';
+        } else if (existingExprs > 1) {
+          // If there are multiple, we need to figure out which one this is
+          // For now, just use "expr" for consistency
+          edgeLabel = 'expr';
+        }
+      }
+      
+      // Try to get from placeholder map if available
+      if (ctx.placeholderMap) {
+        // Find the placeholder name used for this subquery
+        for (const [ast, placeholder] of ctx.placeholderMap.entries()) {
+          if (ast === subqueryInfo.ast) {
+            edgeLabel = placeholder;
+            break;
+          }
+        }
+      }
+      
+      // Connect subquery to WHERE clause with the placeholder as label
+      const edge = createEdge(ctx, 'subqueryResult', subqueryNode.id, whereNode.id);
+      edge.label = edgeLabel;
+      edges.push(edge);
     }
 
     // Create snapshot after WHERE (schema might have new inferred columns)
@@ -133,7 +163,7 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
 
   // HAVING clause
   if (stmt.having) {
-    const havingNode = createNode(ctx, 'clause', 'HAVING', expressionToSQL(stmt.having));
+    const havingNode = createNode(ctx, 'clause', 'HAVING', expressionToSQL(stmt.having, ctx));
     nodes.push(havingNode);
 
     if (lastNodeId) {
@@ -161,8 +191,15 @@ export const convertSelectStatement = (ctx: ConversionContext, stmt: Select): { 
       if (subqueryInfo.hasSubquery && subqueryInfo.subqueryType && subqueryInfo.ast) {
         const subqueryNode = convertSubquery(ctx, subqueryInfo.ast, subqueryInfo.subqueryType, parentTableRefs);
         nodes.push(subqueryNode);
+        
+        // For SELECT clauses, we typically don't show placeholders in output
+        // but we can still use a descriptive label based on the subquery type
+        let edgeLabel = getSubqueryResultLabel(subqueryInfo.subqueryType);
+        
         // Connect subquery to SELECT clause
-        edges.push(createEdge(ctx, 'subqueryResult', subqueryNode.id, selectNode.id));
+        const edge = createEdge(ctx, 'subqueryResult', subqueryNode.id, selectNode.id);
+        edge.label = edgeLabel;
+        edges.push(edge);
       }
     }
   }
@@ -287,12 +324,18 @@ const convertFromClause = (ctx: ConversionContext, from: From[]): { nodes: Node[
         const joinType = table.join || 'INNER JOIN';
         
         // Create a separate table node for the joined table
-        const tableLabel = getTableLabel(table);
-        const tableNode = createNode(ctx, 'relation', tableLabel, tableLabel);
+        let tableLabel = getTableLabel(table);
+        
+        // If this is a CTE reference, use a more descriptive label
+        if (ctx.cteNodes && ctx.cteNodes[tableName]) {
+          tableLabel = `WITH ${tableName}`;
+        }
+        
+        const tableNode = createNode(ctx, 'relation', tableLabel, getTableLabel(table));
         nodes.push(tableNode);
         
         // Create the JOIN operation node (without table info in label)
-        const joinNode = createNode(ctx, 'op', joinType, `${joinType}${table.on ? ` ON ${expressionToSQL(table.on)}` : ''}`);
+        const joinNode = createNode(ctx, 'op', joinType, `${joinType}${table.on ? ` ON ${expressionToSQL(table.on, ctx)}` : ''}`);
         nodes.push(joinNode);
 
         // Connect: previous node -> JOIN node
@@ -430,7 +473,7 @@ const convertUpdateStatement = (ctx: ConversionContext, stmt: Update): { nodes: 
   let lastNodeId = updateNode.id;
 
   if (stmt.where) {
-    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where));
+    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where, ctx));
     nodes.push(whereNode);
     edges.push(createEdge(ctx, 'flow', lastNodeId, whereNode.id));
   }
@@ -458,7 +501,7 @@ const convertDeleteStatement = (ctx: ConversionContext, stmt: Delete): { nodes: 
   let lastNodeId = deleteNode.id;
 
   if (stmt.where) {
-    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where));
+    const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where, ctx));
     nodes.push(whereNode);
     edges.push(createEdge(ctx, 'flow', lastNodeId, whereNode.id));
   }

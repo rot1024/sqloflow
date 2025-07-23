@@ -1,0 +1,6 @@
+flowchart LR
+    node_0[FROM users]
+    node_1["WHERE<br/>---<br/>status = 'pending'<br/>AND<br/>name = John's Pizza<br/>AND<br/>city IN 'New York', 'Los Angeles'"]
+    node_2["SELECT<br/>---<br/>*"]
+    node_0 --> node_1
+    node_1 --> node_2

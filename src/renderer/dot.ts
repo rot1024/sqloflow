@@ -1,5 +1,12 @@
 /**
  * Enhanced schema view renderer that shows column-level details
+ * 
+ * Color scheme:
+ * - lightgreen: Source tables (FROM nodes, base tables)
+ * - salmon: Operations that transform schema (JOIN, UNION, SELECT with transformations)
+ * - lightyellow: Operations that filter but don't change schema (WHERE, HAVING, simple SELECT)
+ * - lightblue: CTE subgraph backgrounds
+ * - lightgrey: Subquery subgraph backgrounds
  */
 
 import type { Graph, Node, Edge, SubqueryNode, SchemaSnapshot } from '../types/ir.js';
@@ -11,6 +18,7 @@ import {
   getJoinColumns,
   type TableInfo
 } from './utils/schema-inference.js';
+import { formatWhereExpressionDot, formatWhereExpressionDotHtml } from './utils/expression-formatter.js';
 
 interface OperationNode {
   id: string;
@@ -133,9 +141,8 @@ export const renderDot = (graph: Graph): string => {
 
       const columns = table.columns.join('\\n');
       const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
-      const color = table.type === 'source' ? 'lightgreen' :
-                    table.type === 'result' ? 'lightcoral' : 'lightblue';
-      lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=${color}];`);
+      // Source tables are always green
+      lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
     }
   });
 
@@ -162,9 +169,8 @@ export const renderDot = (graph: Graph): string => {
     if (!alreadyRendered) {
       const columns = table.columns.join('\\n');
       const label = columns ? buildRecordLabel(`FROM ${table.tableName}`, columns) : escapeLabelPart(`FROM ${table.tableName}`);
-      const color = table.type === 'source' ? 'lightgreen' :
-                    table.type === 'result' ? 'lightcoral' : 'lightblue';
-      lines.push(`  ${table.id} [label="${label}", style=filled, fillcolor=${color}];`);
+      // Source tables are always green
+      lines.push(`  ${table.id} [label="${label}", style=filled, fillcolor=lightgreen];`);
     }
   });
 
@@ -178,6 +184,7 @@ export const renderDot = (graph: Graph): string => {
       
       // This is a table node from a JOIN operation
       const label = escapeLabelPart(node.label);
+      // Source tables are always green
       lines.push(`  ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
     }
   });
@@ -216,7 +223,6 @@ export const renderDot = (graph: Graph): string => {
       lines.push(`    label="CTE: ${cteName}";`);
       lines.push('    style=filled;');
       lines.push('    color=lightblue;');
-      lines.push('    node [style=filled,color=white];');
 
       // Render nodes in the CTE
       cteSubgraphNodes.forEach(nodeId => {
@@ -242,6 +248,7 @@ export const renderDot = (graph: Graph): string => {
 
               const columns = table.columns.join('\\n');
               const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
+              // Source tables in CTEs are green
               lines.push(`    ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
             }
           } else if (operations.find(op => op.id === node.id)) {
@@ -249,8 +256,8 @@ export const renderDot = (graph: Graph): string => {
             const op = operations.find(op => op.id === node.id)!;
             const labelParts: string[] = [op.operation];
 
-            // Add SQL parameter if available (except for SELECT, UNION, and Result operations)
-            if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION') && op.operation !== 'Result') {
+            // Add SQL parameter if available (except for SELECT and UNION operations)
+            if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION')) {
               labelParts.push(op.sql);
             }
 
@@ -261,7 +268,8 @@ export const renderDot = (graph: Graph): string => {
             }
 
             const label = buildRecordLabel(...labelParts);
-            lines.push(`    ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
+            const color = getOperationColor(op.operation, op.sql);
+            lines.push(`    ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=${color}];`);
           } else {
             // Other nodes
             lines.push(`    ${escapeId(node.id)} [label="${escapeLabelPart(node.label)}", style=filled, fillcolor=lightyellow];`);
@@ -307,8 +315,8 @@ export const renderDot = (graph: Graph): string => {
 
     const labelParts: string[] = [op.operation];
 
-    // Add SQL parameter if available (except for SELECT, UNION, and Result operations)
-    if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION') && op.operation !== 'Result') {
+    // Add SQL parameter if available (except for SELECT and UNION operations)
+    if (op.sql && op.operation !== 'SELECT' && !op.operation.includes('UNION')) {
       labelParts.push(op.sql);
     }
 
@@ -320,7 +328,8 @@ export const renderDot = (graph: Graph): string => {
     }
 
     const label = buildRecordLabel(...labelParts);
-    lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
+    const color = getOperationColor(op.operation, op.sql);
+    lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=${color}];`);
   });
 
   lines.push('');
@@ -337,8 +346,21 @@ export const renderDot = (graph: Graph): string => {
       const columns = schemaInfo.join('\\n');
       // Remove table name from label - just show the JOIN type
       const joinType = node.label.split(' ')[0]; // Extract just "INNER", "LEFT", etc.
-      const label = columns ? buildRecordLabel(`${joinType} JOIN`, columns) : escapeLabelPart(`${joinType} JOIN`);
-      lines.push(`  ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=lightyellow];`);
+      
+      // Extract ON clause from node.sql if available
+      const labelParts = [`${joinType} JOIN`];
+      if (columns) {
+        labelParts.push(columns);
+      }
+      
+      // Add ON clause if present
+      const onMatch = node.sql.match(/ON\s+(.+)$/i);
+      if (onMatch) {
+        labelParts.push(`ON ${onMatch[1]}`);
+      }
+      
+      const label = buildRecordLabel(...labelParts);
+      lines.push(`  ${escapeId(node.id)} [label="${label}", style=filled, fillcolor=salmon];`);
     }
   });
 
@@ -463,6 +485,56 @@ export const renderDot = (graph: Graph): string => {
 };
 
 // Helper functions
+
+/**
+ * Determine if an operation changes the schema (columns/structure) of the data
+ * 
+ * Schema-changing operations:
+ * - JOIN: Combines columns from multiple tables
+ * - UNION: Combines rows, may change column names/types
+ * - DISTINCT: Removes duplicate rows, changes cardinality
+ * - GROUP BY: Aggregates data, produces new column structure
+ * - SELECT (except SELECT *): Projects specific columns or expressions
+ * 
+ * Non-schema-changing operations:
+ * - WHERE: Filters rows but keeps same columns
+ * - HAVING: Filters grouped rows but keeps same columns
+ * - ORDER BY: Sorts rows but keeps same columns
+ * - LIMIT: Limits row count but keeps same columns
+ * - OFFSET: Skips rows but keeps same columns
+ */
+function isSchemaChangingOperation(operation: string, sql?: string): boolean {
+  // Operations that always change schema
+  if (operation.includes('JOIN')) return true;
+  if (operation.includes('UNION')) return true;
+  if (operation === 'DISTINCT') return true;
+  if (operation === 'GROUP BY') return true;
+  
+  // SELECT changes schema unless it's SELECT *
+  if (operation === 'SELECT') {
+    return sql !== '*';
+  }
+  
+  // These operations filter but don't change schema
+  if (operation === 'WHERE') return false;
+  if (operation === 'HAVING') return false;
+  if (operation === 'ORDER BY') return false;
+  if (operation === 'LIMIT') return false;
+  if (operation === 'OFFSET') return false;
+  
+  // Default to assuming schema change for unknown operations
+  return true;
+}
+
+/**
+ * Get the color for an operation node based on whether it changes schema
+ * - salmon: Operations that transform schema (JOIN, UNION, SELECT with transformations)
+ * - lightyellow: Operations that filter but don't change schema (WHERE, HAVING, simple SELECT)
+ */
+function getOperationColor(operation: string, sql?: string): string {
+  return isSchemaChangingOperation(operation, sql) ? 'salmon' : 'lightyellow';
+}
+
 function escapeId(id: string): string {
   if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
     return id;
@@ -497,6 +569,43 @@ function escapeLabelPart(part: string): string {
 function buildRecordLabel(...parts: string[]): string {
   // Build a record label by escaping parts and joining with unescaped pipes
   return parts.map(part => escapeLabelPart(part)).join('|');
+}
+
+function buildHtmlLabel(title: string, ...parts: string[]): string {
+  // Build an HTML-like label for better formatting support
+  // Use BORDER="0" to avoid double borders (node already has a border)
+  let html = '<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">';
+  
+  // Title row with bottom border
+  html += `<TR><TD><B>${escapeHtml(title)}</B></TD></TR>`;
+  
+  // Add horizontal line
+  html += '<HR/>';
+  
+  // Content rows
+  for (const part of parts) {
+    html += `<TR><TD ALIGN="LEFT">${part}</TD></TR>`;
+  }
+  
+  html += '</TABLE>';
+  return html;
+}
+
+function buildMinimalHtmlLabel(title: string, content: string): string {
+  // Build a minimal HTML label that looks like a record label
+  // but supports left-aligned text with line breaks
+  return `<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+    <TR><TD><B>${escapeHtml(title)}</B> | ${content}</TD></TR>
+  </TABLE>`;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function extractColumnsFromSelectSQL(sql: string): string[] {
@@ -548,7 +657,6 @@ function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], par
   lines.push(`    label="${subqueryType} Subquery${correlatedLabel}";`);
   lines.push('    style=filled;');
   lines.push('    color=lightgrey;');
-  lines.push('    node [style=filled,color=white];');
 
   if (!subqueryNode.innerGraph) {
     lines.push('  }');
@@ -590,7 +698,8 @@ function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], par
     // Find edges in parent graph that connect from this subquery
     const outgoingEdges = parentGraph.edges.filter(e => e.from.node === subqueryNode.id);
     for (const edge of outgoingEdges) {
-      const resultLabel = getSubqueryResultLabel(subqueryNode.subqueryType);
+      // Use the edge's label if it exists, otherwise fall back to default
+      const resultLabel = edge.label || getSubqueryResultLabel(subqueryNode.subqueryType);
       lines.push(`  ${escapeId(resultNode.id)} -> ${escapeId(edge.to.node)} [label="${resultLabel}"];`);
     }
   }

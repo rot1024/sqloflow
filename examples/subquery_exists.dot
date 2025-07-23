@@ -7,7 +7,7 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|EXISTS(...)", style=filled, fillcolor=lightyellow];
-  node_3 [label="SELECT|c.customer_id\nc.name", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|c.customer_id\nc.name", style=filled, fillcolor=salmon];
 
   // Data flow edges
 
@@ -19,12 +19,11 @@ digraph schema_flow {
     label="EXISTS Subquery (correlated: c.customer_id)";
     style=filled;
     color=lightgrey;
-    node [style=filled,color=white];
     // Source tables
     subq_0_node_0 [label="FROM orders AS o|customer_id\nstatus", style=filled, fillcolor=lightgreen];
     // Operations
     subq_0_node_1 [label="WHERE|o.customer_id = c.customer_id AND o.status = 'pending'", style=filled, fillcolor=lightyellow];
-    subq_0_node_2 [label="SELECT|1", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|1", style=filled, fillcolor=salmon];
     // Data flow edges
     // JOIN operations with table info
     subq_0_node_0 -> subq_0_node_1;

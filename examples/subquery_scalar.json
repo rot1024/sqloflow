@@ -92,7 +92,8 @@
       },
       "to": {
         "node": "node_1"
-      }
+      },
+      "label": "expr"
     },
     {
       "id": "edge_2",

@@ -54,25 +54,35 @@ describe('Converter Examples Integration', () => {
           };
           
           // Only include properties that are present in the node and not undefined
-          if (node.innerGraph !== undefined) {
-            nodeObj.innerGraph = node.innerGraph;
-          }
-          if (node.correlatedFields !== undefined && node.correlatedFields.length > 0) {
-            nodeObj.correlatedFields = node.correlatedFields;
-          }
-          if ((node as any).subqueryType !== undefined) {
-            nodeObj.subqueryType = (node as any).subqueryType;
+          if (node.kind === "subquery") {
+            const subqueryNode = node as any;
+            if (subqueryNode.innerGraph !== undefined) {
+              nodeObj.innerGraph = subqueryNode.innerGraph;
+            }
+            if (subqueryNode.correlatedFields !== undefined && subqueryNode.correlatedFields.length > 0) {
+              nodeObj.correlatedFields = subqueryNode.correlatedFields;
+            }
+            if (subqueryNode.subqueryType !== undefined) {
+              nodeObj.subqueryType = subqueryNode.subqueryType;
+            }
           }
           
           return nodeObj;
         }),
-        edges: ir.edges.map(edge => ({
-          id: edge.id,
-          kind: edge.kind,
-          from: edge.from,
-          to: edge.to,
-        })),
-        snapshots: ir.snapshots.map(snapshot => ({
+        edges: ir.edges.map(edge => {
+          const edgeObj: any = {
+            id: edge.id,
+            kind: edge.kind,
+            from: edge.from,
+            to: edge.to,
+          };
+          
+          // Only include label if it exists
+          if (edge.label !== undefined) edgeObj.label = edge.label;
+          
+          return edgeObj;
+        }),
+        snapshots: ir.snapshots?.map(snapshot => ({
           nodeId: snapshot.nodeId,
           schema: {
             columns: snapshot.schema.columns.map(col => {

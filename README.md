@@ -37,12 +37,12 @@ flowchart LR
     end
 
     node_4["FROM<br/>---<br/>customers.id<br/>customers.name<br/>customers.email"]
-    node_5[high_value_customers]
-    node_6["INNER JOIN<br/>---<br/>c.id<br/>c.name<br/>c.email<br/>h.customer_id<br/>h.total_spent"]
+    node_5[WITH high_value_customers]
+    node_6["INNER JOIN<br/>---<br/>c.id<br/>c.name<br/>c.email<br/>h.customer_id<br/>h.total_spent<br/>---<br/>ON c.id = h.customer_id"]
     node_7["SELECT<br/>---<br/>c.name<br/>c.email<br/>h.total_spent"]
     node_8["ORDER BY<br/>---<br/>h.total_spent DESC"]
     node_9["LIMIT 10"]
-    node_3 -->|CTE result| node_5
+    node_3 --> node_5
     node_4 --> node_6
     node_5 --> node_6
     node_6 --> node_7
@@ -106,13 +106,13 @@ cat query.sql | sqloflow
 # Visualize a complex analytical query
 sqloflow "
   WITH monthly_sales AS (
-    SELECT 
+    SELECT
       DATE_TRUNC('month', created_at) as month,
       SUM(amount) as total
     FROM orders
     GROUP BY 1
   )
-  SELECT 
+  SELECT
     m.month,
     m.total,
     LAG(m.total) OVER (ORDER BY m.month) as prev_month,
@@ -120,6 +120,9 @@ sqloflow "
   FROM monthly_sales m
   ORDER BY m.month DESC
 "
+
+# Visualize a JOIN query showing table relationships
+sqloflow "SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE o.total > 100"
 
 # Generate a GraphViz visualization and convert to PNG
 sqloflow -f dot "SELECT * FROM users u JOIN posts p ON u.id = p.user_id" | dot -Tpng -o query.png
@@ -197,22 +200,28 @@ flowchart LR
 ### ASCII Art
 Great for terminal output:
 ```
-┌─────────┐    ┌─────────┐    ┌─────────┐
-│  FROM   │───▶│  WHERE  │───▶│ SELECT  │
-│ users   │    │active=1 │    │id, name │
-└─────────┘    └─────────┘    └─────────┘
+┌──────────────┐     ┌────────────────────────────┐     ┌────────────────┐
+│ FROM users u ├────▶│ INNER JOIN ON u.id = o.uid │───▶│ SELECT u.name, │
+└──────────────┘     └────────────────────────────┘     │   o.total      │
+                                ▲                        └────────────────┘
+                                │
+┌────────────┐                  │
+│ orders o   ├──────────────────┘
+└────────────┘
 ```
 
 ### GraphViz DOT
 For high-quality rendered diagrams:
 ```dot
 digraph {
-  node_0 [label="FROM users\n──────\nid\nname\nemail"];
-  node_1 [label="WHERE\nactive = true"];
-  node_2 [label="SELECT\n──────\nid\nname"];
-  
-  node_0 -> node_1;
+  node_0 [label="FROM users AS u|id\nname", style=filled, fillcolor=lightgreen];
+  node_1 [label="orders AS o", style=filled, fillcolor=lightgreen];
+  node_2 [label="INNER JOIN|u.id\nu.name|ON u.id = o.user_id", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|u.name\no.total", style=filled, fillcolor=lightyellow];
+
+  node_0 -> node_2;
   node_1 -> node_2;
+  node_2 -> node_3;
 }
 ```
 

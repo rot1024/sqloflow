@@ -8,7 +8,7 @@ export interface TableInfo {
   id: string;
   tableName: string;
   columns: string[];
-  type: 'source' | 'result' | 'intermediate';
+  type: 'source' | 'intermediate';
 }
 
 export interface ColumnReference {
@@ -224,10 +224,19 @@ export function getJoinColumns(
   
   // Get ALL columns from ALL joined tables
   joinedTables.forEach(tableName => {
+    // Find the alias for this table (if any)
+    let displayName = tableName;
+    for (const [alias, tbl] of tableAliases.entries()) {
+      if (tbl === tableName) {
+        displayName = alias;
+        break;
+      }
+    }
+    
     const table = tables.get(tableName);
     if (table) {
       table.columns.forEach(colName => {
-        schemaInfo.push(`${tableName}.${colName}`);
+        schemaInfo.push(`${displayName}.${colName}`);
       });
     } else if (graph.snapshots) {
       // Check if it's a CTE by looking at snapshots
@@ -235,7 +244,7 @@ export function getJoinColumns(
         const cteColumns = snapshot.schema.columns.filter(col => col.source === tableName);
         if (cteColumns.length > 0) {
           cteColumns.forEach(col => {
-            schemaInfo.push(`${tableName}.${col.name}`);
+            schemaInfo.push(`${displayName}.${col.name}`);
           });
           break;
         }

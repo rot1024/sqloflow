@@ -1,6 +1,6 @@
 flowchart LR
     node_0[FROM products]
-    node_1["WHERE<br/>---<br/>status = &#39;active&#39; AND price &gt; 10"]
+    node_1["WHERE<br/>---<br/>status = 'active' AND price &gt; 10"]
     node_2["GROUP BY<br/>---<br/>category"]
     node_3["HAVING<br/>---<br/>COUNT(*) &gt; 5"]
     node_4["SELECT<br/>---<br/>category<br/>total_products<br/>avg_price<br/>max_price"]

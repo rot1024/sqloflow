@@ -7,7 +7,7 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|u.id IN expr", style=filled, fillcolor=lightyellow];
-  node_3 [label="SELECT|u.id\nu.name", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|u.id\nu.name", style=filled, fillcolor=salmon];
 
   // Data flow edges
 
@@ -19,16 +19,15 @@ digraph schema_flow {
     label="IN Subquery";
     style=filled;
     color=lightgrey;
-    node [style=filled,color=white];
     // Source tables
     subq_0_node_0 [label="FROM orders AS o|total_amount\nuser_id", style=filled, fillcolor=lightgreen];
     // Operations
     subq_0_node_1 [label="WHERE|o.total_amount \> 100000", style=filled, fillcolor=lightyellow];
-    subq_0_node_2 [label="SELECT|o.user_id", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|o.user_id", style=filled, fillcolor=salmon];
     // Data flow edges
     // JOIN operations with table info
     subq_0_node_0 -> subq_0_node_1;
     subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [label="set of values"];
+  subq_0_node_2 -> node_1 [label="expr"];
 }

@@ -18,4 +18,6 @@ export interface ConversionContext {
   cteNodes?: Record<string, string>; // Maps CTE name to its last node ID
   currentNodeId?: string; // Current node being processed
   tableSourceNodes?: Record<string, string>; // Maps table alias to the node that introduced it
+  placeholderCounter?: number; // Counter for generating unique placeholder names
+  placeholderMap?: Map<object, string>; // Maps subquery AST to placeholder name
 }

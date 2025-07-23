@@ -1,0 +1,320 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM products AS p"
+    },
+    {
+      "id": "node_1",
+      "kind": "relation",
+      "label": "orders AS o",
+      "sql": "orders AS o"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "INNER JOIN ON p.product_id = o.product_id"
+    },
+    {
+      "id": "node_3",
+      "kind": "relation",
+      "label": "customers AS c",
+      "sql": "customers AS c"
+    },
+    {
+      "id": "node_4",
+      "kind": "op",
+      "label": "INNER JOIN",
+      "sql": "INNER JOIN ON o.customer_id = c.customer_id"
+    },
+    {
+      "id": "node_5",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "p.category = 'Electronics' OR p.category = 'Computers' OR p.category = 'Phones' AND p.price > 100 AND p.status = 'active' AND o.order_date >= '2023-01-01' AND o.order_date <= '2023-12-31' AND c.country = 'USA' OR c.country = 'Canada' AND c.province IN 'ON', 'BC', 'QC' AND p.stock_quantity > 0 AND p.discount > 0.1 OR p.featured = TRUE AND p.rating >= 4.5"
+    },
+    {
+      "id": "node_6",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "p.product_id, p.name, p.price, p.category, c.customer_name, o.order_date"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "flow",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    },
+    {
+      "id": "edge_4",
+      "kind": "flow",
+      "from": {
+        "node": "node_4"
+      },
+      "to": {
+        "node": "node_5"
+      }
+    },
+    {
+      "id": "edge_5",
+      "kind": "flow",
+      "from": {
+        "node": "node_5"
+      },
+      "to": {
+        "node": "node_6"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
+      }
+    },
+    {
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.product_id",
+            "name": "product_id",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.product_id",
+            "name": "product_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_4",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.product_id",
+            "name": "product_id",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.product_id",
+            "name": "product_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "o.customer_id",
+            "name": "customer_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "c.customer_id",
+            "name": "customer_id",
+            "source": "c",
+            "table": "customers",
+            "sourceNodeId": "node_3"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_5",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.product_id",
+            "name": "product_id",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.product_id",
+            "name": "product_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "o.customer_id",
+            "name": "customer_id",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "c.customer_id",
+            "name": "customer_id",
+            "source": "c",
+            "table": "customers",
+            "sourceNodeId": "node_3"
+          },
+          {
+            "id": "p.category",
+            "name": "category",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "p.price",
+            "name": "price",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "p.status",
+            "name": "status",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "o.order_date",
+            "name": "order_date",
+            "source": "o",
+            "table": "orders",
+            "sourceNodeId": "node_1"
+          },
+          {
+            "id": "c.country",
+            "name": "country",
+            "source": "c",
+            "table": "customers",
+            "sourceNodeId": "node_3"
+          },
+          {
+            "id": "c.province",
+            "name": "province",
+            "source": "c",
+            "table": "customers",
+            "sourceNodeId": "node_3"
+          },
+          {
+            "id": "p.stock_quantity",
+            "name": "stock_quantity",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "p.discount",
+            "name": "discount",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "p.featured",
+            "name": "featured",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          },
+          {
+            "id": "p.rating",
+            "name": "rating",
+            "source": "p",
+            "table": "products",
+            "sourceNodeId": "node_0"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_6",
+      "schema": {
+        "columns": [
+          {
+            "id": "p.product_id",
+            "name": "p.product_id",
+            "source": "p",
+            "table": "products"
+          },
+          {
+            "id": "p.name",
+            "name": "p.name",
+            "source": "p",
+            "table": "products"
+          },
+          {
+            "id": "p.price",
+            "name": "p.price",
+            "source": "p",
+            "table": "products"
+          },
+          {
+            "id": "p.category",
+            "name": "p.category",
+            "source": "p",
+            "table": "products"
+          },
+          {
+            "id": "c.customer_name",
+            "name": "c.customer_name",
+            "source": "c",
+            "table": "customers"
+          },
+          {
+            "id": "o.order_date",
+            "name": "o.order_date",
+            "source": "o",
+            "table": "orders"
+          }
+        ]
+      }
+    }
+  ]
+}

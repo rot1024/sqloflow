@@ -32,6 +32,8 @@ export const createContext = (schema: SchemaInfo): ConversionContext => {
     currentColumns,
     snapshots: [],
     cteNodes: {},
-    tableSourceNodes: {}
+    tableSourceNodes: {},
+    placeholderCounter: 1,
+    placeholderMap: new Map()
   };
 };

@@ -39,7 +39,7 @@
     {
       "id": "node_6",
       "kind": "relation",
-      "label": "recent_max AS r",
+      "label": "WITH recent_max",
       "sql": "recent_max AS r"
     },
     {

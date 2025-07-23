@@ -9,7 +9,7 @@ flowchart LR
         subq_0_node_0 --> subq_0_node_1
         subq_0_node_1 --> subq_0_node_2
     end
-    subq_0_node_2 -->|1 row, 1 col| node_1
+    subq_0_node_2 -->|expr| node_1
     node_3["SELECT<br/>---<br/>o.o.id<br/>o.o.total_amount"]
     node_0 --> node_1
     node_1 --> node_3

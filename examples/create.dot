@@ -7,7 +7,7 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|price \> 50", style=filled, fillcolor=lightyellow];
-  node_2 [label="SELECT|name\nprice", style=filled, fillcolor=lightyellow];
+  node_2 [label="SELECT|name\nprice", style=filled, fillcolor=salmon];
 
   // Data flow edges
 

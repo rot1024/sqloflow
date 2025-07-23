@@ -1,0 +1,6 @@
+flowchart LR
+    node_0[FROM orders]
+    node_1["WHERE<br/>---<br/>YEAR ( order_date )= 2023<br/>AND<br/>MONTH ( order_date )IN 1, 2, 3<br/>AND<br/>  CONCAT ( first_name, '<br/>  AND<br/>', last_name )= 'John<br/>AND<br/>Doe'<br/>AND<br/>total &gt; COALESCE ( discount_amount, 0 )"]
+    node_2["SELECT<br/>---<br/>*"]
+    node_0 --> node_1
+    node_1 --> node_2

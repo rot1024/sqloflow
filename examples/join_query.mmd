@@ -1,7 +1,7 @@
 flowchart LR
     node_0["FROM<br/>---<br/>users.id<br/>users.name"]
     node_1[orders AS o]
-    node_2["INNER JOIN<br/>---<br/>users.id<br/>users.name"]
+    node_2["INNER JOIN<br/>---<br/>u.id<br/>u.name<br/>---<br/>ON u.id = o.user_id"]
     node_3["WHERE<br/>---<br/>o.total &gt; 100"]
     node_4["SELECT<br/>---<br/>u.u.name<br/>o.o.total"]
     node_5["ORDER BY o.total DESC"]

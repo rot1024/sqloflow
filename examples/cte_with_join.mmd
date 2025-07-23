@@ -3,7 +3,7 @@ flowchart LR
         direction TB
         node_3["SELECT<br/>---<br/>customer_id<br/>max_total"]
         node_2["GROUP BY<br/>---<br/>customer_id"]
-        node_1["WHERE<br/>---<br/>created_at &gt;= CURRENT_DATE() - INTERVAL &#39;30 days&#39;"]
+        node_1["WHERE<br/>---<br/>created_at &gt;= CURRENT_DATE ()- INTERVAL '30 days'"]
         node_0["FROM<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
         node_0 --> node_1
         node_1 --> node_2
@@ -11,11 +11,11 @@ flowchart LR
     end
 
     node_5["FROM<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
-    node_6[recent_max AS r]
-    node_7["INNER JOIN<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id"]
+    node_6[WITH recent_max]
+    node_7["INNER JOIN<br/>---<br/>orders.customer_id<br/>orders.total_amount<br/>orders.id<br/>---<br/>ON r.customer_id = o.customer_id"]
     node_8["WHERE<br/>---<br/>o.total_amount = r.max_total"]
     node_9["SELECT<br/>---<br/>o.o.id<br/>o.o.total_amount"]
-    node_3 -->|CTE result| node_6
+    node_3 --> node_6
     node_5 --> node_7
     node_6 --> node_7
     node_7 --> node_8

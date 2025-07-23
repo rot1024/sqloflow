@@ -1,0 +1,6 @@
+flowchart LR
+    node_0[FROM users]
+    node_1["WHERE<br/>---<br/>status = 'active'<br/>AND<br/>created_at &gt; '2023-01-01'<br/>AND<br/>role = 'admin'<br/>OR<br/>role = 'moderator'"]
+    node_2["SELECT<br/>---<br/>*"]
+    node_0 --> node_1
+    node_1 --> node_2

@@ -1,0 +1,6 @@
+-- Test SQL with functions in WHERE clause
+SELECT * FROM orders
+WHERE YEAR(order_date) = 2023 
+  AND MONTH(order_date) IN (1, 2, 3)
+  AND CONCAT(first_name, ' AND ', last_name) = 'John AND Doe'
+  AND total > COALESCE(discount_amount, 0);

@@ -1,0 +1,17 @@
+digraph schema_flow {
+  rankdir=LR;
+  node [shape=record];
+
+  // Source tables
+  node_0 [label="FROM users", style=filled, fillcolor=lightgreen];
+
+  // Operations
+  node_1 [label="WHERE|status = 'pending' AND name = John's Pizza AND city IN 'New York', 'Los Angeles'", style=filled, fillcolor=lightyellow];
+  node_2 [label="SELECT|*", style=filled, fillcolor=lightyellow];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_2;
+}

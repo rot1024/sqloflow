@@ -1,0 +1,25 @@
+digraph schema_flow {
+  rankdir=LR;
+  node [shape=record];
+
+  // Source tables
+  node_0 [label="FROM products AS p|product_id\ncategory\nprice\nstatus\nstock_quantity\ndiscount\nfeatured\nrating\nname", style=filled, fillcolor=lightgreen];
+
+  node_1 [label="orders AS o", style=filled, fillcolor=lightgreen];
+  node_3 [label="customers AS c", style=filled, fillcolor=lightgreen];
+  // Operations
+  node_5 [label="WHERE|p.category = 'Electronics' OR p.category = 'Computers' OR p.category = 'Phones' AND p.price \> 100 AND p.status = 'active' AND o.order_date \>= '2023-01-01' AND o.order_date \<= '2023-12-31' AND c.country = 'USA' OR c.country = 'Canada' AND c.province IN 'ON', 'BC', 'QC' AND p.stock_quantity \> 0 AND p.discount \> 0.1 OR p.featured = TRUE AND p.rating \>= 4.5", style=filled, fillcolor=lightyellow];
+  node_6 [label="SELECT|p.product_id\np.name\np.price\np.category\nc.customer_name\no.order_date", style=filled, fillcolor=salmon];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_2 [label="INNER JOIN|p.product_id\np.category\np.price\np.status\np.stock_quantity\np.discount\np.featured\np.rating\np.name|ON p.product_id = o.product_id", style=filled, fillcolor=salmon];
+  node_4 [label="INNER JOIN|ON o.customer_id = c.customer_id", style=filled, fillcolor=salmon];
+  node_0 -> node_2;
+  node_1 -> node_2;
+  node_2 -> node_4;
+  node_3 -> node_4;
+  node_4 -> node_5;
+  node_5 -> node_6;
+}

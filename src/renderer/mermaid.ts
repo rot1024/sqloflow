@@ -5,6 +5,7 @@ import {
   getJoinColumns,
   type TableInfo
 } from './utils/schema-inference.js';
+import { formatWhereExpressionMermaid } from './utils/expression-formatter.js';
 
 export const renderMermaid = (graph: Graph): string => {
   const lines: string[] = ['flowchart LR'];
@@ -134,7 +135,7 @@ export const renderMermaid = (graph: Graph): string => {
       const outgoingEdges = graph.edges.filter(e => e.from.node === cteNode.id);
       for (const outEdge of outgoingEdges) {
         // Create direct connection from last CTE node to the target
-        lines.push(`    ${sanitizeId(lastCteNode)} -->|CTE result| ${sanitizeId(outEdge.to.node)}`);
+        lines.push(`    ${sanitizeId(lastCteNode)} --> ${sanitizeId(outEdge.to.node)}`);
       }
     }
   }
@@ -161,7 +162,17 @@ const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph
     if (joinColumns.length > 0) {
       const joinType = node.label.split(' ')[0]; // Extract just "INNER", "LEFT", etc.
       const columns = joinColumns.map(col => escapeLabel(col)).join('<br/>');
-      return `${nodeId}["${joinType} JOIN<br/>---<br/>${columns}"]`;
+      
+      // Extract ON clause from node.sql if available
+      let onClause = '';
+      if (node.sql) {
+        const onMatch = node.sql.match(/ON\s+(.+)$/i);
+        if (onMatch) {
+          onClause = `<br/>---<br/>ON ${escapeLabel(onMatch[1])}`;
+        }
+      }
+      
+      return `${nodeId}["${joinType} JOIN<br/>---<br/>${columns}${onClause}"]`;
     }
   }
 
@@ -185,7 +196,15 @@ const formatNode = (node: Node, nodeSchemas: Map<string, string[]>, graph: Graph
   }
 
   // Add SQL parameter if available (for WHERE, HAVING, etc.)
-  if (sql && node.kind === 'clause') {
+  if (node.sql && node.kind === 'clause') {
+    // Format WHERE expressions with line breaks for AND/OR
+    if (node.label === 'WHERE') {
+      // Use original SQL, not escaped version
+      const formattedSql = formatWhereExpressionMermaid(node.sql);
+      // Escape after formatting
+      const escapedSql = escapeLabel(formattedSql);
+      return `${nodeId}["${label}<br/>---<br/>${escapedSql}"]`;
+    }
     return `${nodeId}["${label}<br/>---<br/>${sql}"]`;
   }
 
@@ -235,12 +254,12 @@ const formatEdge = (edge: Edge, graph: Graph): string => {
 
   if (fromNode?.kind === 'op' && toNode?.label.startsWith('CTE:')) {
     const cteName = toNode.label.replace('CTE: ', '');
-    return `${fromId} -->|CTE result| ${toId}`;
+    return `${fromId} --> ${toId}`;
   }
 
   // Handle subquery result edges
   if (edge.kind === 'subqueryResult') {
-    const subqueryType = fromNode?.label.match(/\((\w+)\)/)?.[1] || 'result';
+    const subqueryType = fromNode?.label.match(/\((\w+)\)/)?.[1] || 'subquery';
     return `${fromId} -->|${subqueryType}| ${toId}`;
   }
 
@@ -258,11 +277,19 @@ const sanitizeId = (id: string): string => {
 
 const escapeLabel = (label: string): string => {
   // Escape Mermaid special characters
+  // Don't escape <br/> tags that we've added for formatting
+  // Don't escape single quotes since they're safe inside double quotes in Mermaid
   return label
-    .replace(/>/g, '&gt;')
-    .replace(/</g, '&lt;')
+    .replace(/<(?!br\/>)/g, '&lt;')  // Escape < except in <br/>
+    .replace(/>(?!$)/g, (match, offset, str) => {
+      // Don't escape > that's part of <br/>
+      if (str.substring(offset - 4, offset + 1) === '<br/>') {
+        return '>';
+      }
+      return '&gt;';
+    })
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    // Don't escape single quotes - they're safe inside double quotes in Mermaid
     .replace(/\|/g, '&#124;');
 };
 
@@ -368,7 +395,8 @@ const renderSubquery = (subqueryNode: SubqueryNode, parentGraph: Graph, nodeSche
     // Find edges in parent graph that connect to this subquery
     const outgoingEdges = parentGraph.edges.filter(e => e.from.node === subqueryNode.id);
     for (const edge of outgoingEdges) {
-      const label = getSubqueryResultLabel(subqueryNode.subqueryType);
+      // Use the edge's label if it exists, otherwise fall back to default
+      const label = edge.label || getSubqueryResultLabel(subqueryNode.subqueryType);
       lines.push(`    ${sanitizeId(resultNode.id)} -->|${label}| ${sanitizeId(edge.to.node)}`);
     }
   }

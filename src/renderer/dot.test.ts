@@ -133,6 +133,6 @@ describe('renderDot', () => {
 
     const result = renderDot(graph);
     
-    expect(result).toContain('INNER JOIN|users.id');
+    expect(result).toContain('INNER JOIN|u.id');
   });
 });

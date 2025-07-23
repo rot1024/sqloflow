@@ -7,7 +7,7 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|p.category_id IN expr", style=filled, fillcolor=lightyellow];
-  node_3 [label="SELECT|p.product_id\np.name", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|p.product_id\np.name", style=filled, fillcolor=salmon];
 
   // Data flow edges
 
@@ -19,16 +19,15 @@ digraph schema_flow {
     label="IN Subquery (correlated: p.launch_date)";
     style=filled;
     color=lightgrey;
-    node [style=filled,color=white];
     // Source tables
     subq_0_node_0 [label="FROM categories AS c|status\ncreated_date\ncategory_id", style=filled, fillcolor=lightgreen];
     // Operations
     subq_0_node_1 [label="WHERE|c.status = 'active' AND c.created_date \> p.launch_date", style=filled, fillcolor=lightyellow];
-    subq_0_node_2 [label="SELECT|c.category_id", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|c.category_id", style=filled, fillcolor=salmon];
     // Data flow edges
     // JOIN operations with table info
     subq_0_node_0 -> subq_0_node_1;
     subq_0_node_1 -> subq_0_node_2;
   }
-  subq_0_node_2 -> node_1 [label="set of values"];
+  subq_0_node_2 -> node_1 [label="expr"];
 }

@@ -31,7 +31,7 @@ describe('Mermaid renderer', () => {
     expect(result).toContain('flowchart LR');
     expect(result).toContain('FROM<br/>---<br/>users.id<br/>users.name');
     expect(result).toContain('node_1[orders AS o]');
-    expect(result).toContain('INNER JOIN<br/>---<br/>users.id<br/>users.name');
+    expect(result).toContain('INNER JOIN<br/>---<br/>u.id<br/>u.name');
     expect(result).toContain('SELECT<br/>---<br/>');
   });
 
@@ -53,7 +53,7 @@ describe('Mermaid renderer', () => {
     
     expect(result).toContain('subgraph');
     expect(result).toContain('CTE: recent_orders');
-    expect(result).toContain('CTE result');
+    expect(result).toContain('WITH recent_orders');
   });
 
   it('should escape special characters in mermaid', () => {

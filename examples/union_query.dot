@@ -7,9 +7,9 @@ digraph schema_flow {
   node_3 [label="FROM organizations", style=filled, fillcolor=lightgreen];
 
   // Operations
-  node_1 [label="SELECT|id\nname\nuser AS source", style=filled, fillcolor=lightyellow];
-  node_2 [label="UNION ALL|id\nname\nsource", style=filled, fillcolor=lightyellow];
-  node_4 [label="SELECT|id\ncompany_name AS name\norg AS source", style=filled, fillcolor=lightyellow];
+  node_1 [label="SELECT|id\nname\nuser AS source", style=filled, fillcolor=salmon];
+  node_2 [label="UNION ALL|id\nname\nsource", style=filled, fillcolor=salmon];
+  node_4 [label="SELECT|id\ncompany_name AS name\norg AS source", style=filled, fillcolor=salmon];
 
   // Data flow edges
 

@@ -109,7 +109,8 @@
             },
             "to": {
               "node": "subq_0_node_1"
-            }
+            },
+            "label": "expr"
           },
           {
             "id": "subq_0_edge_2",
@@ -150,7 +151,8 @@
       },
       "to": {
         "node": "node_1"
-      }
+      },
+      "label": "expr"
     },
     {
       "id": "edge_2",

@@ -8,17 +8,17 @@ flowchart LR
         subgraph subquery_subq_0_node_2 ["Subquery (in)"]
             direction TB
             subq_1_node_0[FROM customers]
-            subq_1_node_1["WHERE<br/>---<br/>country = &#39;JP&#39;"]
+            subq_1_node_1["WHERE<br/>---<br/>country = 'JP'"]
             subq_1_node_2["SELECT id"]
             subq_1_node_0 --> subq_1_node_1
             subq_1_node_1 --> subq_1_node_2
         end
-        subq_1_node_2 -->|set of values| subq_0_node_1
+        subq_1_node_2 -->|expr| subq_0_node_1
         subq_0_node_3["SELECT AVG(amount)"]
         subq_0_node_0 --> subq_0_node_1
         subq_0_node_1 --> subq_0_node_3
     end
-    subq_0_node_3 -->|1 row, 1 col| node_1
+    subq_0_node_3 -->|expr| node_1
     node_3["SELECT<br/>---<br/>*"]
     node_0 --> node_1
     node_1 --> node_3

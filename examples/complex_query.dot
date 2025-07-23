@@ -7,9 +7,9 @@ digraph schema_flow {
 
   // Operations
   node_1 [label="WHERE|status = 'active' AND price \> 10", style=filled, fillcolor=lightyellow];
-  node_2 [label="GROUP BY|category", style=filled, fillcolor=lightyellow];
+  node_2 [label="GROUP BY|category", style=filled, fillcolor=salmon];
   node_3 [label="HAVING|COUNT(*) \> 5", style=filled, fillcolor=lightyellow];
-  node_4 [label="SELECT|category\nCOUNT(*) AS total_products\nAVG(price) AS avg_price\nMAX(price) AS max_price", style=filled, fillcolor=lightyellow];
+  node_4 [label="SELECT|category\nCOUNT(*) AS total_products\nAVG(price) AS avg_price\nMAX(price) AS max_price", style=filled, fillcolor=salmon];
   node_5 [label="ORDER BY|total_products DESC, avg_price ASC", style=filled, fillcolor=lightyellow];
   node_6 [label="LIMIT|10 OFFSET 20", style=filled, fillcolor=lightyellow];
 

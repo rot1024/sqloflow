@@ -1,0 +1,90 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM orders"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "YEAR(order_date) = 2023 AND MONTH(order_date) IN 1, 2, 3 AND CONCAT(first_name, ' AND ', last_name) = 'John AND Doe' AND total > COALESCE(discount_amount, 0)"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "*"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
+      }
+    },
+    {
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "order_date",
+            "name": "order_date"
+          },
+          {
+            "id": "first_name",
+            "name": "first_name"
+          },
+          {
+            "id": "last_name",
+            "name": "last_name"
+          },
+          {
+            "id": "total",
+            "name": "total"
+          },
+          {
+            "id": "discount_amount",
+            "name": "discount_amount"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "*",
+            "name": "*"
+          }
+        ]
+      }
+    }
+  ]
+}
