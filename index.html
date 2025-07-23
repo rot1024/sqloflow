@@ -204,7 +204,7 @@ ORDER BY order_count DESC</textarea>
         <select id="format">
           <option value="mermaid">Mermaid</option>
           <option value="ascii">ASCII</option>
-          <option value="dot">DOT (Graphviz)</option>
+          <option value="dot" selected>DOT (Graphviz)</option>
           <option value="json">JSON</option>
         </select>
         <select id="dialect">
@@ -230,11 +230,11 @@ ORDER BY order_count DESC</textarea>
     <div class="panel">
       <h2>Output</h2>
       <div class="view-toggle">
-        <button id="text-view-btn" class="active" onclick="toggleView('text')">Text</button>
-        <button id="visual-view-btn" onclick="toggleView('visual')">Visual Preview</button>
+        <button id="text-view-btn" onclick="toggleView('text')">Text</button>
+        <button id="visual-view-btn" class="active" onclick="toggleView('visual')">Visual Preview</button>
       </div>
-      <div id="output"></div>
-      <div id="visual-output"></div>
+      <div id="output" class="hidden"></div>
+      <div id="visual-output" class="active"></div>
     </div>
   </div>
 
@@ -253,7 +253,7 @@ ORDER BY order_count DESC</textarea>
     });
     
     let currentResult = '';
-    let currentFormat = 'mermaid';
+    let currentFormat = 'dot';
     
     const examples = {
       simple: `SELECT id, name, email 
@@ -398,6 +398,12 @@ WHERE active = true`
     
     // Initial visualization
     visualize();
+    // Switch to visual view after initial render
+    setTimeout(() => {
+      if (currentFormat === 'dot') {
+        toggleView('visual');
+      }
+    }, 100);
   </script>
 </body>
 </html>
