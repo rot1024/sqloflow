@@ -4,6 +4,8 @@
 
 Turn your complex SQL queries into intuitive visualizations that show how data flows through each operation!
 
+**[Try it live! →](https://rot1024.github.io/sqloflow/)**
+
 ## ✨ Quick Example
 
 Transform this SQL:
