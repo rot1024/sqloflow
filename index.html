@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sqloflow - SQL Visualization Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    select, button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    #output {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      min-height: 200px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #output.ascii {
+      white-space: pre;
+      overflow-x: auto;
+      word-break: normal;
+    }
+    .error {
+      color: #dc3545;
+    }
+    .examples {
+      margin-top: 10px;
+    }
+    .example-btn {
+      background-color: #6c757d;
+      font-size: 12px;
+      padding: 4px 8px;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>sqloflow - SQL Visualization Demo</h1>
+  
+  <div class="container">
+    <div class="panel">
+      <h2>SQL Input</h2>
+      <textarea id="sqlInput" placeholder="Enter your SQL query here...">SELECT 
+  u.id, 
+  u.name, 
+  COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.active = 1
+GROUP BY u.id, u.name
+HAVING COUNT(o.id) > 5
+ORDER BY order_count DESC</textarea>
+      
+      <div class="controls">
+        <select id="format">
+          <option value="mermaid">Mermaid</option>
+          <option value="ascii">ASCII</option>
+          <option value="dot">DOT (Graphviz)</option>
+          <option value="json">JSON</option>
+        </select>
+        <select id="dialect">
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="sqlite">SQLite</option>
+          <option value="mariadb">MariaDB</option>
+          <option value="transactsql">TransactSQL</option>
+        </select>
+        <button onclick="visualize()">Visualize</button>
+      </div>
+      
+      <div class="examples">
+        <h3>Examples:</h3>
+        <button class="example-btn" onclick="loadExample('simple')">Simple SELECT</button>
+        <button class="example-btn" onclick="loadExample('join')">JOIN</button>
+        <button class="example-btn" onclick="loadExample('subquery')">Subquery</button>
+        <button class="example-btn" onclick="loadExample('cte')">CTE</button>
+        <button class="example-btn" onclick="loadExample('union')">UNION</button>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <h2>Output</h2>
+      <div id="output"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { parse, convert, render } from './src/index.js';
+    
+    const examples = {
+      simple: `SELECT id, name, email 
+FROM users 
+WHERE active = true`,
+      
+      join: `SELECT 
+  u.name, 
+  p.title, 
+  p.created_at
+FROM users u
+INNER JOIN posts p ON u.id = p.user_id
+WHERE p.published = true
+ORDER BY p.created_at DESC`,
+      
+      subquery: `SELECT name, email
+FROM users
+WHERE id IN (
+  SELECT DISTINCT user_id
+  FROM orders
+  WHERE total > 100
+)`,
+      
+      cte: `WITH active_users AS (
+  SELECT * FROM users
+  WHERE active = true
+),
+high_value_orders AS (
+  SELECT * FROM orders
+  WHERE total > 1000
+)
+SELECT 
+  au.name,
+  COUNT(hvo.id) as high_value_count
+FROM active_users au
+LEFT JOIN high_value_orders hvo ON au.id = hvo.user_id
+GROUP BY au.name`,
+      
+      union: `SELECT 'Customer' as type, name, email
+FROM customers
+WHERE created_at > '2024-01-01'
+UNION ALL
+SELECT 'Vendor' as type, name, contact_email
+FROM vendors
+WHERE active = true`
+    };
+    
+    window.loadExample = function(exampleName) {
+      const sql = examples[exampleName];
+      if (sql) {
+        document.getElementById('sqlInput').value = sql;
+        visualize();
+      }
+    };
+    
+    window.visualize = function() {
+      const sqlInput = document.getElementById('sqlInput').value;
+      const format = document.getElementById('format').value;
+      const dialect = document.getElementById('dialect').value;
+      const outputDiv = document.getElementById('output');
+      
+      try {
+        const ast = parse(sqlInput, dialect);
+        const ir = convert(ast);
+        const result = render(ir, { format });
+        
+        outputDiv.textContent = result;
+        outputDiv.className = format === 'ascii' ? 'ascii' : '';
+      } catch (error) {
+        outputDiv.textContent = `Error: ${error.message}`;
+        outputDiv.className = 'error';
+      }
+    };
+    
+    // Initial visualization
+    visualize();
+  </script>
+</body>
+</html>

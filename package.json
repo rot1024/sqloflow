@@ -21,8 +21,9 @@
     "test:watch": "vitest --watch",
     "build": "npm run build:lib && npm run build:cli",
     "build:lib": "vite build",
-    "build:cli": "tsc -p tsconfig.cli.json",
-    "dev": "vite build --watch",
+    "build:cli": "vite build --mode cli",
+    "build:demo": "vite build --mode demo",
+    "dev": "vite",
     "prepublishOnly": "npm run build",
     "type": "tsc --noEmit",
     "example": "node ./examples/generate.js"
