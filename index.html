@@ -111,6 +111,51 @@
       overflow-x: auto;
       word-break: normal;
     }
+    .view-toggle {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .view-toggle button {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: #333;
+      margin-right: 10px;
+    }
+    .view-toggle button:last-child {
+      margin-right: 0;
+    }
+    .view-toggle button.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    .view-toggle button:disabled {
+      cursor: not-allowed;
+      color: #999;
+      background-color: #f5f5f5;
+    }
+    #visual-output {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      min-height: 200px;
+      display: none;
+      overflow: auto;
+    }
+    #visual-output.active {
+      display: block;
+    }
+    #output {
+      display: block;
+    }
+    #output.hidden {
+      display: none;
+    }
     .error {
       color: #dc3545;
     }
@@ -125,6 +170,10 @@
       margin-bottom: 5px;
     }
   </style>
+  <!-- Mermaid -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- Viz.js for Graphviz -->
+  <script src="https://unpkg.com/@viz-js/viz@3.2.4/lib/viz-standalone.js"></script>
 </head>
 <body>
   <div class="header">
@@ -180,12 +229,31 @@ ORDER BY order_count DESC</textarea>
     
     <div class="panel">
       <h2>Output</h2>
+      <div class="view-toggle">
+        <button id="text-view-btn" class="active" onclick="toggleView('text')">Text</button>
+        <button id="visual-view-btn" onclick="toggleView('visual')">Visual Preview</button>
+      </div>
       <div id="output"></div>
+      <div id="visual-output"></div>
     </div>
   </div>
 
   <script type="module">
     import { parse, convert, render } from './src/index.js';
+    
+    // Initialize Mermaid
+    mermaid.initialize({ 
+      startOnLoad: false,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#fff',
+        primaryBorderColor: '#007bff',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }
+    });
+    
+    let currentResult = '';
+    let currentFormat = 'mermaid';
     
     const examples = {
       simple: `SELECT id, name, email 
@@ -241,22 +309,90 @@ WHERE active = true`
       }
     };
     
+    window.toggleView = async function(view) {
+      const textBtn = document.getElementById('text-view-btn');
+      const visualBtn = document.getElementById('visual-view-btn');
+      const textOutput = document.getElementById('output');
+      const visualOutput = document.getElementById('visual-output');
+      
+      if (view === 'text') {
+        textBtn.classList.add('active');
+        visualBtn.classList.remove('active');
+        textOutput.classList.remove('hidden');
+        visualOutput.classList.remove('active');
+      } else {
+        textBtn.classList.remove('active');
+        visualBtn.classList.add('active');
+        textOutput.classList.add('hidden');
+        visualOutput.classList.add('active');
+        await renderVisual();
+      }
+    };
+    
+    async function renderVisual() {
+      const visualOutput = document.getElementById('visual-output');
+      
+      if (currentFormat === 'mermaid') {
+        visualOutput.innerHTML = `<div class="mermaid">${currentResult}</div>`;
+        await mermaid.run();
+      } else if (currentFormat === 'dot') {
+        try {
+          const viz = await Viz.instance();
+          const svg = viz.renderSVGElement(currentResult);
+          visualOutput.innerHTML = '';
+          visualOutput.appendChild(svg);
+        } catch (error) {
+          visualOutput.innerHTML = `<div class="error">Error rendering Graphviz: ${error.message}</div>`;
+        }
+      } else {
+        visualOutput.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Visual preview is available for Mermaid and DOT formats only</div>';
+      }
+    }
+    
     window.visualize = function() {
       const sqlInput = document.getElementById('sqlInput').value;
       const format = document.getElementById('format').value;
       const dialect = document.getElementById('dialect').value;
       const outputDiv = document.getElementById('output');
+      const visualBtn = document.getElementById('visual-view-btn');
       
       try {
         const ast = parse(sqlInput, dialect);
         const ir = convert(ast);
         const result = render(ir, { format });
         
+        currentResult = result;
+        currentFormat = format;
+        
         outputDiv.textContent = result;
         outputDiv.className = format === 'ascii' ? 'ascii' : '';
+        
+        // Enable/disable visual preview button
+        if (format === 'mermaid' || format === 'dot') {
+          visualBtn.disabled = false;
+          // If currently in visual view, re-render the visual
+          if (visualBtn.classList.contains('active')) {
+            // Keep visual view active and re-render
+            const visualOutput = document.getElementById('visual-output');
+            visualOutput.classList.add('active');
+            document.getElementById('output').classList.add('hidden');
+            renderVisual();
+          }
+        } else {
+          visualBtn.disabled = true;
+          // Switch back to text view if currently in visual
+          if (visualBtn.classList.contains('active')) {
+            toggleView('text');
+          }
+        }
       } catch (error) {
         outputDiv.textContent = `Error: ${error.message}`;
         outputDiv.className = 'error';
+        visualBtn.disabled = true;
+        // Switch back to text view if currently in visual
+        if (visualBtn.classList.contains('active')) {
+          toggleView('text');
+        }
       }
     };
     
