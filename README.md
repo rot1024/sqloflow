@@ -27,7 +27,7 @@ Into this beautiful visual flow:
 flowchart LR
     subgraph cte_high_value_customers [CTE: high_value_customers]
         direction TB
-        node_3["SELECT<br/>---<br/>customer_id<br/>total_spent"]
+        node_3["SELECT<br/>---<br/>customer_id, SUM(total) AS total_spent"]
         node_2["HAVING<br/>---<br/>SUM(total) &gt; 1000"]
         node_1["GROUP BY<br/>---<br/>customer_id"]
         node_0["WHERE<br/>---<br/>created_at &gt;= '2024-01-01'"]
@@ -198,17 +198,25 @@ flowchart LR
 ```
 
 ### ASCII Art
-Great for terminal output:
+Great for terminal output with enhanced details:
 ```
-┌──────────────┐     ┌────────────────────────────┐     ┌────────────────┐
-│ FROM users u ├────▶│ INNER JOIN ON u.id = o.uid │───▶│ SELECT u.name, │
-└──────────────┘     └────────────────────────────┘     │   o.total      │
-                                ▲                        └────────────────┘
-                                │
-┌────────────┐                  │
-│ orders o   ├──────────────────┘
-└────────────┘
+┌────────────┐     ┌─────────────────────┐    ┌───────────────┐    ┌───────────┐    ┌───────────────────────┐
+│    FROM    │     │     INNER JOIN      │    │     WHERE     │    │  SELECT   │  ┌▶│ ORDER BY o.total DESC │
+│ ─────────  │     │      ─────────      │  ┌▶│   ─────────   │─ ┐ │ ───────── │  │ └───────────────────────┘
+│  users.id  │─ ┐  │        u.id         │  │ │ o.total > 100 │  └▶│ u.u.name  │─ ┘
+│ users.name │  └┌▶│       u.name        │─ ┘ └───────────────┘    │ o.o.total │
+└────────────┘   │ │      ─────────      │                         └───────────┘
+                 │ │ ON u.id = o.user_id │
+                 │ └─────────────────────┘
+┌─────────────┐  │
+│ orders AS o │─ ┘
+└─────────────┘
 ```
+
+The ASCII renderer now shows:
+- **Column information** for FROM and JOIN operations
+- **Formatted WHERE clauses** with AND/OR operators on separate lines
+- **Flattened subqueries** displaying their internal structure inline
 
 ### GraphViz DOT
 For high-quality rendered diagrams:
