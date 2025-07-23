@@ -61,35 +61,24 @@ flowchart LR
 - 🌐 **Universal compatibility** - Works in browsers, Node.js, and as a CLI tool
 - 🗂️ **Complex query support** - CTEs, subqueries, joins, aggregations, and more
 
-## 📦 Installation
-
-```bash
-npm install sqloflow
-```
-
-Or use it globally as a CLI:
-```bash
-npm install -g sqloflow
-```
-
 ## 🖥️ CLI Usage
 
 ### Basic Usage
 
 ```bash
 # Output Mermaid diagram to stdout
-sqloflow "SELECT * FROM users"
+npx sqloflow "SELECT * FROM users"
 
 # Save to file
-sqloflow -o diagram.md "SELECT * FROM users"
+npx sqloflow -o diagram.md "SELECT * FROM users"
 
 # Different output formats
-sqloflow -f ascii "SELECT * FROM users"    # ASCII art
-sqloflow -f dot "SELECT * FROM users"      # GraphViz DOT
-sqloflow -f json "SELECT * FROM users"     # Raw JSON structure
+npx sqloflow -f ascii "SELECT * FROM users"    # ASCII art
+npx sqloflow -f dot "SELECT * FROM users"      # GraphViz DOT
+npx sqloflow -f json "SELECT * FROM users"     # Raw JSON structure
 
 # Read from file
-cat query.sql | sqloflow
+cat query.sql | npx sqloflow
 ```
 
 ### Options
@@ -106,7 +95,7 @@ cat query.sql | sqloflow
 
 ```bash
 # Visualize a complex analytical query
-sqloflow "
+npx sqloflow "
   WITH monthly_sales AS (
     SELECT
       DATE_TRUNC('month', created_at) as month,
@@ -124,16 +113,22 @@ sqloflow "
 "
 
 # Visualize a JOIN query showing table relationships
-sqloflow "SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE o.total > 100"
+npx sqloflow "SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE o.total > 100"
 
 # Generate a GraphViz visualization and convert to PNG
-sqloflow -f dot "SELECT * FROM users u JOIN posts p ON u.id = p.user_id" | dot -Tpng -o query.png
+npx sqloflow -f dot "SELECT * FROM users u JOIN posts p ON u.id = p.user_id" | dot -Tpng -o query.png
 
 # Quick ASCII visualization in terminal
-sqloflow -f ascii "SELECT name, COUNT(*) FROM users GROUP BY name"
+npx sqloflow -f ascii "SELECT name, COUNT(*) FROM users GROUP BY name"
 ```
 
 ## 📚 Library Usage
+
+### 📦 Installation
+
+```bash
+npm install sqloflow
+```
 
 ### Basic Example
 
