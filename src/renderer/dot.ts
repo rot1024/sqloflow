@@ -69,8 +69,8 @@ export const renderDot = (graph: Graph): string => {
   // Process nodes to identify operations
   graph.nodes.forEach(node => {
     if (node.kind === 'op' || node.kind === 'clause') {
-      // Skip FROM nodes as they will be replaced by table nodes
-      if (node.label === 'FROM') return;
+      // Skip FROM nodes only if they are mapped to table nodes
+      if (node.label === 'FROM' && fromNodeToTable.has(node.id)) return;
 
       const operation: OperationNode = {
         id: node.id,
@@ -167,6 +167,10 @@ export const renderDot = (graph: Graph): string => {
         const columns = table.columns.join('\\n');
         const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
         // Source tables are always green
+        lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+      } else if (fromNode) {
+        // No table info found, but we still need to render the FROM node
+        const label = fromNode.sql ? escapeLabelPart(fromNode.sql) : escapeLabelPart(`FROM ${tableName}`);
         lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
       }
     }
@@ -312,6 +316,13 @@ export const renderDot = (graph: Graph): string => {
 
     // Skip nodes already rendered in CTE subgraphs
     if (processedNodes.has(op.id)) return;
+
+    // Handle unmapped FROM nodes specially
+    if (op.operation === 'FROM') {
+      const label = op.sql ? escapeLabelPart(op.sql) : escapeLabelPart('FROM');
+      lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+      return;
+    }
 
     // Check if this node has multiple incoming edges (schema change)
     const hasMultipleInputs = (incomingEdgeCount.get(op.id) || 0) >= 2;

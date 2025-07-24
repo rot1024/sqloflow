@@ -1,0 +1,33 @@
+digraph schema_flow {
+  rankdir=LR;
+  node [shape=record];
+
+  // Source tables
+  node_0 [label="FROM users", style=filled, fillcolor=lightgreen];
+
+  // Operations
+  node_1 [label="WHERE|id IN expr", style=filled, fillcolor=lightyellow];
+  node_3 [label="SELECT|name\nemail", style=filled, fillcolor=salmon];
+
+  // Data flow edges
+
+  // JOIN operations with table info
+  node_0 -> node_1;
+  node_1 -> node_3;
+
+  subgraph cluster_node_2 {
+    label="IN Subquery";
+    style=filled;
+    color=lightgrey;
+    // Source tables
+    subq_0_node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
+    // Operations
+    subq_0_node_1 [label="WHERE|total \> 100", style=filled, fillcolor=lightyellow];
+    subq_0_node_2 [label="SELECT|user_id", style=filled, fillcolor=salmon];
+    // Data flow edges
+    // JOIN operations with table info
+    subq_0_node_0 -> subq_0_node_1;
+    subq_0_node_1 -> subq_0_node_2;
+  }
+  subq_0_node_2 -> node_1 [label="expr"];
+}

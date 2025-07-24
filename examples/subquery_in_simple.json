@@ -1,0 +1,140 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM users"
+    },
+    {
+      "id": "node_1",
+      "kind": "clause",
+      "label": "WHERE",
+      "sql": "id IN expr"
+    },
+    {
+      "id": "node_2",
+      "kind": "subquery",
+      "label": "Subquery (in)",
+      "sql": "(subquery)",
+      "subqueryType": "in",
+      "innerGraph": {
+        "nodes": [
+          {
+            "id": "subq_0_node_0",
+            "kind": "op",
+            "label": "FROM",
+            "sql": "FROM orders"
+          },
+          {
+            "id": "subq_0_node_1",
+            "kind": "clause",
+            "label": "WHERE",
+            "sql": "total > 100"
+          },
+          {
+            "id": "subq_0_node_2",
+            "kind": "op",
+            "label": "SELECT",
+            "sql": "user_id"
+          }
+        ],
+        "edges": [
+          {
+            "id": "subq_0_edge_0",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_0"
+            },
+            "to": {
+              "node": "subq_0_node_1"
+            }
+          },
+          {
+            "id": "subq_0_edge_1",
+            "kind": "flow",
+            "from": {
+              "node": "subq_0_node_1"
+            },
+            "to": {
+              "node": "subq_0_node_2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "name, email"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "subqueryResult",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_1"
+      },
+      "label": "expr"
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
+      }
+    },
+    {
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "id",
+            "name": "id"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_3",
+      "schema": {
+        "columns": [
+          {
+            "id": "name",
+            "name": "name"
+          },
+          {
+            "id": "email",
+            "name": "email"
+          }
+        ]
+      }
+    }
+  ]
+}

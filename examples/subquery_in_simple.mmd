@@ -1,0 +1,15 @@
+flowchart LR
+    node_0[FROM users]
+    node_1["WHERE<br/>---<br/>id IN expr"]
+    subgraph subquery_node_2 ["Subquery (in)"]
+        direction TB
+        subq_0_node_0[FROM orders]
+        subq_0_node_1["WHERE<br/>---<br/>total &gt; 100"]
+        subq_0_node_2["SELECT user_id"]
+        subq_0_node_0 --> subq_0_node_1
+        subq_0_node_1 --> subq_0_node_2
+    end
+    subq_0_node_2 -->|expr| node_1
+    node_3["SELECT<br/>---<br/>name<br/>email"]
+    node_0 --> node_1
+    node_1 --> node_3
