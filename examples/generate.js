@@ -5,7 +5,7 @@ import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { parse, convert, render } from '../dist/index.js';
+import { parse, convert, render } from '../dist/sqloflow.es.js';
 
 const execAsync = promisify(exec);
 const __dirname = dirname(fileURLToPath(import.meta.url));

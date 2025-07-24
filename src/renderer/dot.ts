@@ -123,24 +123,52 @@ export const renderDot = (graph: Graph): string => {
     // Skip nodes already rendered in CTE subgraphs
     if (processedNodes.has(fromNodeId)) return;
 
-    const tableName = tableKey.split('_')[0]; // Extract actual table name
-    const table = tables.get(tableName);
-    if (table) {
-      // Find the FROM node to get alias information
-      const fromNode = graph.nodes.find(n => n.id === fromNodeId);
+    // Extract actual table name by removing the node ID suffix
+    const lastUnderscore = tableKey.lastIndexOf('_node_');
+    const tableName = lastUnderscore > -1 ? tableKey.substring(0, lastUnderscore) : tableKey.split('_')[0];
+    
+    // Find the FROM node to get alias information
+    const fromNode = graph.nodes.find(n => n.id === fromNodeId);
+    
+    // Check if this is a CTE reference by checking values in the cteNodes map
+    let isCTE = false;
+    cteNodes.forEach((cteName) => {
+      if (tableName === cteName) {
+        isCTE = true;
+      }
+    });
+    
+    if (isCTE) {
+      // This is a CTE reference, render it as a FROM node without columns
       let displayName = tableName;
-
+      
       if (fromNode && fromNode.sql) {
         const aliasInfo = extractTableAndAlias(fromNode.sql);
         if (aliasInfo && aliasInfo.alias !== aliasInfo.table) {
           displayName = `${tableName} AS ${aliasInfo.alias}`;
         }
       }
-
-      const columns = table.columns.join('\\n');
-      const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
-      // Source tables are always green
+      
+      const label = escapeLabelPart(`FROM ${displayName}`);
       lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+    } else {
+      // Check if it's a regular table
+      const table = tables.get(tableName);
+      if (table) {
+        let displayName = tableName;
+
+        if (fromNode && fromNode.sql) {
+          const aliasInfo = extractTableAndAlias(fromNode.sql);
+          if (aliasInfo && aliasInfo.alias !== aliasInfo.table) {
+            displayName = `${tableName} AS ${aliasInfo.alias}`;
+          }
+        }
+
+        const columns = table.columns.join('\\n');
+        const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
+        // Source tables are always green
+        lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+      }
     }
   });
 
