@@ -505,9 +505,9 @@ export const renderDot = (graph: Graph): string => {
  * 
  * Schema-changing operations:
  * - JOIN: Combines columns from multiple tables
- * - UNION: Combines rows, may change column names/types
- * - DISTINCT: Removes duplicate rows, changes cardinality
- * - GROUP BY: Aggregates data, produces new column structure
+ * - APPLY: Combines columns from table-valued functions or subqueries
+ * - PIVOT: Transforms rows into columns
+ * - UNPIVOT: Transforms columns into rows
  * - SELECT (except SELECT *): Projects specific columns or expressions
  * 
  * Non-schema-changing operations:
@@ -516,28 +516,25 @@ export const renderDot = (graph: Graph): string => {
  * - ORDER BY: Sorts rows but keeps same columns
  * - LIMIT: Limits row count but keeps same columns
  * - OFFSET: Skips rows but keeps same columns
+ * - FETCH: Limits row count but keeps same columns
+ * - DISTINCT: Removes duplicate rows but keeps same columns
+ * - GROUP BY: Aggregates data but doesn't change schema structure
+ * - UNION/INTERSECT/EXCEPT: Set operations that preserve schema
  */
 function isSchemaChangingOperation(operation: string, sql?: string): boolean {
-  // Operations that always change schema
+  // Operations that change schema
   if (operation.includes('JOIN')) return true;
-  if (operation.includes('UNION')) return true;
-  if (operation === 'DISTINCT') return true;
-  if (operation === 'GROUP BY') return true;
+  if (operation.includes('APPLY')) return true;
+  if (operation.includes('PIVOT')) return true;
+  if (operation.includes('UNPIVOT')) return true;
   
   // SELECT changes schema unless it's SELECT *
   if (operation === 'SELECT') {
     return sql !== '*';
   }
   
-  // These operations filter but don't change schema
-  if (operation === 'WHERE') return false;
-  if (operation === 'HAVING') return false;
-  if (operation === 'ORDER BY') return false;
-  if (operation === 'LIMIT') return false;
-  if (operation === 'OFFSET') return false;
-  
-  // Default to assuming schema change for unknown operations
-  return true;
+  // All other operations don't change schema
+  return false;
 }
 
 /**
