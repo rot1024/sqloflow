@@ -1,7 +1,7 @@
 {
   "name": "sqloflow",
   "type": "module",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "./dist/sqloflow.cjs.js",
   "module": "./dist/sqloflow.es.js",
   "types": "./dist/index.d.ts",
