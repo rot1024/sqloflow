@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { writeFileSync } from 'fs';
+import { writeFileSync, readFileSync } from 'fs';
 import { parse, convert, render } from './index.js';
 import type { RenderOptions, Dialect } from './index.js';
 import { ParseError, ConversionError, RenderError } from './errors.js';
@@ -8,6 +8,7 @@ import { ParseError, ConversionError, RenderError } from './errors.js';
 interface CliOptions {
   format: 'json' | 'mermaid' | 'ascii' | 'dot';
   output?: string;
+  input?: string;
   dialect: Dialect;
   help: boolean;
 }
@@ -22,6 +23,7 @@ Usage:
 Options:
   -f, --format <format>     Output format: json, mermaid, ascii, dot (default: mermaid)
   -o, --output <file>       Output to file instead of stdout
+  -i, --input <file>        Input SQL from file
   -d, --dialect <dialect>   SQL dialect: postgresql, mysql, sqlite, mariadb, transactsql
                            (default: postgresql)
   -h, --help               Show this help message
@@ -32,6 +34,9 @@ Examples:
   
   # Output JSON to file
   sqloflow -f json -o output.json "SELECT * FROM users"
+  
+  # Read from file
+  sqloflow -i query.sql -f mermaid -o diagram.md
   
   # Read from stdin
   cat query.sql | sqloflow -f mermaid -o diagram.md
@@ -69,6 +74,11 @@ export const parseArgs = (args: string[]): { options: CliOptions; sql?: string }
       case '-o':
       case '--output':
         options.output = args[++i];
+        break;
+        
+      case '-i':
+      case '--input':
+        options.input = args[++i];
         break;
         
       case '-d':
@@ -130,9 +140,18 @@ export const runCli = async (args: string[], options?: {
       return;
     }
     
-    // Get SQL (from argument or stdin)
+    // Get SQL (from input file, argument, or stdin)
     let sql: string;
-    if (argSql) {
+    if (cliOptions.input) {
+      // Read from input file
+      try {
+        sql = readFileSync(cliOptions.input, 'utf-8');
+      } catch (err) {
+        error(`Error reading file ${cliOptions.input}: ${err instanceof Error ? err.message : String(err)}`);
+        exit(1);
+        return;
+      }
+    } else if (argSql) {
       sql = argSql;
     } else if (stdin !== undefined) {
       sql = stdin;
