@@ -34,7 +34,7 @@ interface OperationNode {
   outputColumns: string[];
 }
 
-export const renderDot = (graph: Graph): string => {
+export const renderDot = (graph: Graph, parentTables?: Map<string, TableInfo>): string => {
   const lines: string[] = [];
   lines.push('digraph schema_flow {');
   lines.push('  rankdir=LR;');
@@ -42,7 +42,68 @@ export const renderDot = (graph: Graph): string => {
   lines.push('');
 
   // Infer schema information from the graph
-  const { tables, tableAliases } = inferSchemaFromGraph(graph);
+  let tables: Map<string, TableInfo>;
+  let tableAliases: Map<string, string>;
+  
+  if (parentTables) {
+    // For subqueries, merge parent tables with locally inferred tables
+    const localData = inferSchemaFromGraph(graph);
+    tables = new Map(parentTables);
+    // Add any tables found in this subquery that aren't in parent
+    localData.tables.forEach((tableInfo, tableName) => {
+      if (!tables.has(tableName)) {
+        tables.set(tableName, tableInfo);
+      } else {
+        // Merge columns from local inference into existing table
+        const existingTable = tables.get(tableName)!;
+        const mergedColumns = new Set([...existingTable.columns, ...tableInfo.columns]);
+        tables.set(tableName, {
+          ...existingTable,
+          columns: Array.from(mergedColumns)
+        });
+      }
+    });
+    tableAliases = localData.tableAliases;
+  } else {
+    // First, collect tables from the main graph
+    const inferredData = inferSchemaFromGraph(graph);
+    tables = inferredData.tables;
+    tableAliases = inferredData.tableAliases;
+    
+    // Also collect tables from all subqueries recursively
+    const collectSubqueryTables = (g: Graph) => {
+      g.nodes.forEach(node => {
+        if (node.kind === 'subquery') {
+          const subqueryNode = node as SubqueryNode;
+          if (subqueryNode.innerGraph) {
+            const subqueryData = inferSchemaFromGraph(subqueryNode.innerGraph);
+            // Merge subquery tables into main tables map
+            subqueryData.tables.forEach((tableInfo, tableName) => {
+              if (!tables.has(tableName)) {
+                tables.set(tableName, tableInfo);
+              } else {
+                // Merge columns from subquery inference
+                const existingTable = tables.get(tableName)!;
+                const mergedColumns = new Set([...existingTable.columns, ...tableInfo.columns]);
+                tables.set(tableName, {
+                  ...existingTable,
+                  columns: Array.from(mergedColumns)
+                });
+              }
+            });
+            // Also merge aliases
+            subqueryData.tableAliases.forEach((table, alias) => {
+              tableAliases.set(alias, table);
+            });
+            // Recursively collect from nested subqueries
+            collectSubqueryTables(subqueryNode.innerGraph);
+          }
+        }
+      });
+    };
+    
+    collectSubqueryTables(graph);
+  }
 
   const operations: OperationNode[] = [];
   const fromNodeToTable = new Map<string, string>(); // FROM node ID -> table name
@@ -124,8 +185,9 @@ export const renderDot = (graph: Graph): string => {
     if (processedNodes.has(fromNodeId)) return;
 
     // Extract actual table name by removing the node ID suffix
-    const lastUnderscore = tableKey.lastIndexOf('_node_');
-    const tableName = lastUnderscore > -1 ? tableKey.substring(0, lastUnderscore) : tableKey.split('_')[0];
+    // Handle both regular nodes (e.g., "orders_node_1") and subquery nodes (e.g., "orders_subq_0_node_0")
+    const nodeIdMatch = tableKey.match(/^(.+?)_(subq_\d+_)?node_\d+$/);
+    const tableName = nodeIdMatch ? nodeIdMatch[1] : tableKey.split('_')[0];
     
     // Find the FROM node to get alias information
     const fromNode = graph.nodes.find(n => n.id === fromNodeId);
@@ -153,19 +215,29 @@ export const renderDot = (graph: Graph): string => {
       lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
     } else {
       // Check if it's a regular table
-      const table = tables.get(tableName);
-      if (table) {
+      let table = tables.get(tableName);
+      
+      // If not found by exact name, try to find by alias
+      if (!table && fromNode && fromNode.sql) {
+        const aliasInfo = extractTableAndAlias(fromNode.sql);
+        if (aliasInfo) {
+          // Try the actual table name from the SQL
+          table = tables.get(aliasInfo.table);
+        }
+      }
+      
+      if (table && table.columns.length > 0) {
         let displayName = tableName;
 
         if (fromNode && fromNode.sql) {
           const aliasInfo = extractTableAndAlias(fromNode.sql);
           if (aliasInfo && aliasInfo.alias !== aliasInfo.table) {
-            displayName = `${tableName} AS ${aliasInfo.alias}`;
+            displayName = `${aliasInfo.table} AS ${aliasInfo.alias}`;
           }
         }
 
         const columns = table.columns.join('\\n');
-        const label = columns ? buildRecordLabel(`FROM ${displayName}`, columns) : escapeLabelPart(`FROM ${displayName}`);
+        const label = buildRecordLabel(`FROM ${displayName}`, columns);
         // Source tables are always green
         lines.push(`  ${escapeId(fromNodeId)} [label="${label}", style=filled, fillcolor=lightgreen];`);
       } else if (fromNode) {
@@ -177,32 +249,49 @@ export const renderDot = (graph: Graph): string => {
   });
 
   // Then render any tables that don't have FROM nodes
-  tables.forEach(table => {
-    // Skip CTE tables as they're rendered as subgraphs
-    let isCTE = false;
-    cteNodes.forEach((cteName) => {
-      if (table.tableName === cteName) {
-        isCTE = true;
+  // Skip this section when rendering subqueries to avoid showing parent tables
+  if (!parentTables) {
+    tables.forEach(table => {
+      // Skip CTE tables as they're rendered as subgraphs
+      let isCTE = false;
+      cteNodes.forEach((cteName) => {
+        if (table.tableName === cteName) {
+          isCTE = true;
+        }
+      });
+      if (isCTE) return;
+
+      // Check if this table has already been rendered as a FROM node
+      let alreadyRendered = false;
+      for (const tableKey of fromNodeToTable.values()) {
+        // Extract table name from the key
+        const nodeIdMatch = tableKey.match(/^(.+?)_(subq_\d+_)?node_\d+$/);
+        const keyTableName = nodeIdMatch ? nodeIdMatch[1] : tableKey.split('_')[0];
+        if (keyTableName === table.tableName) {
+          alreadyRendered = true;
+          break;
+        }
+      }
+      
+      // Also check if this table is only used in subqueries
+      let onlyInSubquery = true;
+      graph.nodes.forEach(node => {
+        if (node.kind === 'op' && node.label === 'FROM' && node.sql) {
+          const aliasInfo = extractTableAndAlias(node.sql);
+          if (aliasInfo && aliasInfo.table === table.tableName) {
+            onlyInSubquery = false;
+          }
+        }
+      });
+
+      if (!alreadyRendered && !onlyInSubquery) {
+        const columns = table.columns.join('\\n');
+        const label = columns ? buildRecordLabel(`FROM ${table.tableName}`, columns) : escapeLabelPart(`FROM ${table.tableName}`);
+        // Source tables are always green
+        lines.push(`  ${table.id} [label="${label}", style=filled, fillcolor=lightgreen];`);
       }
     });
-    if (isCTE) return;
-
-    // Check if this table has already been rendered as a FROM node
-    let alreadyRendered = false;
-    for (const tableKey of fromNodeToTable.values()) {
-      if (tableKey.startsWith(table.tableName + '_')) {
-        alreadyRendered = true;
-        break;
-      }
-    }
-
-    if (!alreadyRendered) {
-      const columns = table.columns.join('\\n');
-      const label = columns ? buildRecordLabel(`FROM ${table.tableName}`, columns) : escapeLabelPart(`FROM ${table.tableName}`);
-      // Source tables are always green
-      lines.push(`  ${table.id} [label="${label}", style=filled, fillcolor=lightgreen];`);
-    }
-  });
+  }
 
   lines.push('');
   
@@ -319,6 +408,35 @@ export const renderDot = (graph: Graph): string => {
 
     // Handle unmapped FROM nodes specially
     if (op.operation === 'FROM') {
+      // Try to extract table info and columns
+      if (op.sql) {
+        const aliasInfo = extractTableAndAlias(op.sql);
+        if (aliasInfo) {
+          // First try exact table name
+          let table = tables.get(aliasInfo.table);
+          
+          // If not found, try looking through aliases
+          if (!table) {
+            for (const [alias, tableName] of tableAliases.entries()) {
+              if (alias === aliasInfo.table || tableName === aliasInfo.table) {
+                table = tables.get(tableName);
+                if (table) break;
+              }
+            }
+          }
+          
+          if (table && table.columns.length > 0) {
+            // Show FROM with columns
+            const displayName = aliasInfo.alias !== aliasInfo.table ? 
+              `${aliasInfo.table} AS ${aliasInfo.alias}` : aliasInfo.table;
+            const columns = table.columns.join('\\n');
+            const label = buildRecordLabel(`FROM ${displayName}`, columns);
+            lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
+            return;
+          }
+        }
+      }
+      // Final fallback to simple label
       const label = op.sql ? escapeLabelPart(op.sql) : escapeLabelPart('FROM');
       lines.push(`  ${escapeId(op.id)} [label="${label}", style=filled, fillcolor=lightgreen];`);
       return;
@@ -500,7 +618,7 @@ export const renderDot = (graph: Graph): string => {
     if (node.kind === 'subquery') {
       const subqueryNode = node as SubqueryNode;
       if (subqueryNode.innerGraph) {
-        renderSubquerySubgraph(subqueryNode, lines, graph);
+        renderSubquerySubgraph(subqueryNode, lines, graph, tables);
       }
     }
   });
@@ -538,6 +656,8 @@ function isSchemaChangingOperation(operation: string, sql?: string): boolean {
   if (operation.includes('APPLY')) return true;
   if (operation.includes('PIVOT')) return true;
   if (operation.includes('UNPIVOT')) return true;
+  if (operation.includes('UNION')) return true;  // UNION/UNION ALL change schema
+  if (operation === 'GROUP BY') return true;  // GROUP BY aggregates data, changing schema
   
   // SELECT changes schema unless it's SELECT *
   if (operation === 'SELECT') {
@@ -634,7 +754,7 @@ function escapeHtml(text: string): string {
 
 
 // Render subquery as a subgraph
-function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], parentGraph: Graph): void {
+function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], parentGraph: Graph, parentTables: Map<string, TableInfo>): void {
   const subgraphId = `cluster_${subqueryNode.id}`;
   const subqueryType = subqueryNode.subqueryType.toUpperCase();
   const correlatedLabel = subqueryNode.correlatedFields && subqueryNode.correlatedFields.length > 0
@@ -652,8 +772,8 @@ function renderSubquerySubgraph(subqueryNode: SubqueryNode, lines: string[], par
     return;
   }
 
-  // Recursively render the inner graph using renderDot
-  const innerLines = renderDot(subqueryNode.innerGraph).split('\n');
+  // Recursively render the inner graph using renderDot with parent table information
+  const innerLines = renderDot(subqueryNode.innerGraph, parentTables).split('\n');
 
   // Extract only the node and edge definitions from the inner graph
   let inSubgraph = false;

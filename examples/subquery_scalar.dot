@@ -20,7 +20,7 @@ digraph schema_flow {
     style=filled;
     color=lightgrey;
     // Source tables
-    subq_0_node_0 [label="FROM orders", style=filled, fillcolor=lightgreen];
+    subq_0_node_0 [label="FROM orders|total_amount\nid", style=filled, fillcolor=lightgreen];
     // Operations
     subq_0_node_1 [label="WHERE|customer_id = o.customer_id", style=filled, fillcolor=lightyellow];
     subq_0_node_2 [label="SELECT|MAX(total_amount)", style=filled, fillcolor=salmon];

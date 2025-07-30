@@ -33,7 +33,7 @@ export const createEdge = (ctx: ConversionContext, kind: EdgeKind, fromNodeId: s
 };
 
 // Type guard for table-like objects
-type TableLike = string | BaseFrom | Join | TableExpr | Dual;
+type TableLike = string | BaseFrom | Join | TableExpr | Dual | { db: string | null; table: string };
 
 // Helper functions for SQL generation
 export const getTableLabel = (table: TableLike): string => {

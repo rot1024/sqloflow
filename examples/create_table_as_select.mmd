@@ -1,0 +1,10 @@
+flowchart LR
+    node_0[FROM customer]
+    node_1["GROUP BY<br/>---<br/>c_nationkey"]
+    node_2["SELECT<br/>---<br/>c_nationkey<br/>COUNT(*) AS customer_count<br/>AVG(c_acctbal) AS avg_account_balance<br/>COUNT(c_mktsegment) AS market_segment_count"]
+    node_3["ORDER BY customer_count DESC"]
+    node_4[CREATE TABLE]
+    node_0 --> node_1
+    node_1 --> node_2
+    node_2 --> node_3
+    node_3 --> node_4

@@ -1,0 +1,121 @@
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "kind": "op",
+      "label": "FROM",
+      "sql": "FROM customer"
+    },
+    {
+      "id": "node_1",
+      "kind": "op",
+      "label": "GROUP BY",
+      "sql": "c_nationkey"
+    },
+    {
+      "id": "node_2",
+      "kind": "op",
+      "label": "SELECT",
+      "sql": "c_nationkey, COUNT(*) AS customer_count, AVG(c_acctbal) AS avg_account_balance, COUNT(c_mktsegment) AS market_segment_count"
+    },
+    {
+      "id": "node_3",
+      "kind": "op",
+      "label": "ORDER BY",
+      "sql": "customer_count DESC"
+    },
+    {
+      "id": "node_4",
+      "kind": "op",
+      "label": "CREATE TABLE",
+      "sql": "customer_nation_analysis"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_0",
+      "kind": "flow",
+      "from": {
+        "node": "node_0"
+      },
+      "to": {
+        "node": "node_1"
+      }
+    },
+    {
+      "id": "edge_1",
+      "kind": "flow",
+      "from": {
+        "node": "node_1"
+      },
+      "to": {
+        "node": "node_2"
+      }
+    },
+    {
+      "id": "edge_2",
+      "kind": "flow",
+      "from": {
+        "node": "node_2"
+      },
+      "to": {
+        "node": "node_3"
+      }
+    },
+    {
+      "id": "edge_3",
+      "kind": "flow",
+      "from": {
+        "node": "node_3"
+      },
+      "to": {
+        "node": "node_4"
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "nodeId": "node_0",
+      "schema": {
+        "columns": []
+      }
+    },
+    {
+      "nodeId": "node_1",
+      "schema": {
+        "columns": [
+          {
+            "id": "c_nationkey",
+            "name": "c_nationkey"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "node_2",
+      "schema": {
+        "columns": [
+          {
+            "id": "c_nationkey",
+            "name": "c_nationkey"
+          },
+          {
+            "id": "customer_count",
+            "name": "customer_count",
+            "type": "numeric"
+          },
+          {
+            "id": "avg_account_balance",
+            "name": "avg_account_balance",
+            "type": "numeric"
+          },
+          {
+            "id": "market_segment_count",
+            "name": "market_segment_count",
+            "type": "numeric"
+          }
+        ]
+      }
+    }
+  ]
+}

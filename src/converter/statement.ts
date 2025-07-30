@@ -9,7 +9,8 @@ import type {
   Insert_Replace,
   From,
   With,
-  Join
+  Join,
+  Create
 } from 'node-sql-parser';
 import type { TableRef } from '../types/sql-parser.js';
 import {
@@ -52,8 +53,7 @@ export const convertStatement = (ctx: ConversionContext, stmt: AST): { nodes: No
     case 'delete':
       return convertDeleteStatement(ctx, stmt);
     case 'create':
-      // Skip CREATE statements - they are already processed for schema extraction
-      return { nodes: [], edges: [] };
+      return convertCreateStatement(ctx, stmt);
     default:
       throw new ConversionError(`Unsupported statement type: ${stmt.type}`, stmt.type);
   }
@@ -504,6 +504,45 @@ const convertDeleteStatement = (ctx: ConversionContext, stmt: Delete): { nodes: 
     const whereNode = createNode(ctx, 'clause', 'WHERE', expressionToSQL(stmt.where, ctx));
     nodes.push(whereNode);
     edges.push(createEdge(ctx, 'flow', lastNodeId, whereNode.id));
+  }
+
+  return { nodes, edges };
+};
+
+const convertCreateStatement = (ctx: ConversionContext, stmt: Create): { nodes: Node[]; edges: Edge[] } => {
+  // Only process CREATE TABLE AS SELECT
+  if (stmt.keyword !== 'table' || !stmt.query_expr) {
+    return { nodes: [], edges: [] };
+  }
+
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  // Convert the SELECT query first
+  const selectResult = convertSelectStatement(ctx, stmt.query_expr);
+  nodes.push(...selectResult.nodes);
+  edges.push(...selectResult.edges);
+
+  // Create the CREATE TABLE node and add it at the end
+  const tableName = stmt.table && stmt.table.length > 0 ? getTableName(stmt.table[0]) : 'unknown';
+  const createTableNode = createNode(ctx, 'op', 'CREATE TABLE', tableName);
+  nodes.push(createTableNode);
+
+  // Find the last node of the SELECT query to connect to CREATE TABLE
+  if (selectResult.nodes.length > 0) {
+    // Find the node with no outgoing edges (the final node in the flow)
+    let lastSelectNode = selectResult.nodes[selectResult.nodes.length - 1];
+    
+    // Check if there's an ORDER BY or other final operation
+    for (const node of selectResult.nodes) {
+      const hasOutgoing = selectResult.edges.some(edge => edge.from.node === node.id);
+      if (!hasOutgoing) {
+        lastSelectNode = node;
+        break;
+      }
+    }
+    
+    edges.push(createEdge(ctx, 'flow', lastSelectNode.id, createTableNode.id));
   }
 
   return { nodes, edges };

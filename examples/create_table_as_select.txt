@@ -1,0 +1,9 @@
+┌───────────────┐    ┌─────────────┐    ┌──────────────────────┐    ┌──────────────────────────────┐    ┌──────────────────────────┐ 
+│ FROM customer │─ ┐ │  GROUP BY   │    │        SELECT        │  ┌▶│ ORDER BY customer_count DESC │─ ┐ │       CREATE TABLE       │ 
+└───────────────┘  └▶│  ─────────  │─ ┐ │      ─────────       │  │ └──────────────────────────────┘  └▶│        ─────────         │ 
+                     │ c_nationkey │  │ │     c_nationkey      │  │                                     │ customer_nation_analysis │ 
+                     └─────────────┘  └▶│    customer_count    │─ ┘                                     └──────────────────────────┘ 
+                                        │ avg_account_balance  │                                                                     
+                                        │ market_segment_count │                                                                     
+                                        └──────────────────────┘                                                                     
+                                                                                                                                     

@@ -207,7 +207,44 @@ const drawEdge = (canvas: string[][], from: LayoutNode, to: LayoutNode) => {
   const toX = to.pos.x - 1;
   const toY = to.pos.y + Math.floor(to.height / 2);
   
-  // Draw horizontal line
+  // Check if we need to draw backwards (for CREATE TABLE nodes)
+  if (toX < fromX) {
+    // Draw a line that goes down, left, then up to the target
+    const bottomY = Math.max(...Array.from(canvas.keys())) - 2;
+    
+    // Start from the right edge of source node
+    canvas[fromY][fromX] = '┐';
+    
+    // Draw down from source
+    for (let y = fromY + 1; y <= bottomY; y++) {
+      if (y === bottomY) {
+        canvas[y][fromX] = '┘';
+      } else {
+        canvas[y][fromX] = '│';
+      }
+    }
+    
+    // Draw horizontal line at the bottom
+    for (let x = toX + to.width; x < fromX; x++) {
+      canvas[bottomY][x] = '─';
+    }
+    
+    // Draw up to target
+    for (let y = toY + 1; y <= bottomY; y++) {
+      if (y === bottomY) {
+        canvas[y][toX + to.width] = '└';
+      } else {
+        canvas[y][toX + to.width] = '│';
+      }
+    }
+    
+    // Draw arrow pointing to target node
+    canvas[toY][toX] = '▶';
+    
+    return;
+  }
+  
+  // Original logic for left-to-right edges
   for (let x = fromX; x <= toX; x++) {
     if (x === fromX) {
       canvas[fromY][x] = '─';
@@ -323,10 +360,18 @@ const formatNodeContent = (
         label === 'GROUP BY' || 
         label === 'LIMIT' ||
         label === 'OFFSET' ||
-        label.includes('JOIN')
+        label.includes('JOIN') ||
+        label === 'CREATE TABLE'
       )) {
         // For FROM, just show the SQL
         if (label === 'FROM') {
+          lines.push(sql);
+          return lines;
+        }
+        // For CREATE TABLE, show label and table name
+        if (label === 'CREATE TABLE') {
+          lines.push(label);
+          lines.push('─────────');
           lines.push(sql);
           return lines;
         }
